@@ -2,13 +2,12 @@
 	<!-- Hero Section -->
 	<div class="mb-16 text-center">
 		<p class="mx-auto mb-8 max-w-3xl text-xl text-gray-600">
-			Search for similar startup ideas or browse through our comprehensive database of innovative
-			companies and their funding journeys.
+			Search for similar startup ideas, browse through our comprehensive database, or validate your idea with our AI VC partner.
 		</p>
 	</div>
 
 	<!-- Action Cards -->
-	<div class="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
+	<div class="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
 		<!-- Search Card -->
 		<a
 			href="/search"
@@ -77,6 +76,45 @@
 			</p>
 			<div class="flex items-center font-semibold text-indigo-600 group-hover:text-indigo-700">
 				Browse Database
+				<svg
+					class="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+					></path>
+				</svg>
+			</div>
+		</a>
+
+		<!-- VC Validator Card -->
+		<a
+			href="/validation"
+			class="group block rounded-2xl border border-gray-200 bg-white p-8 shadow-lg transition-all duration-300 hover:border-green-300 hover:shadow-xl"
+		>
+			<div
+				class="mb-6 flex h-16 w-16 items-center justify-center rounded-xl bg-green-100 transition-colors group-hover:bg-green-200"
+			>
+				<svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+					></path>
+				</svg>
+			</div>
+			<h3
+				class="mb-4 text-2xl font-bold text-gray-900 transition-colors group-hover:text-green-600"
+			>
+				VC Validator
+			</h3>
+			<p class="mb-6 text-gray-600">
+				Get your startup idea validated by our AI VC partner. Engage in a dynamic conversation to evaluate market potential, business model, and investment readiness.
+			</p>
+			<div class="flex items-center font-semibold text-green-600 group-hover:text-green-700">
+				Start Validation
 				<svg
 					class="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1"
 					fill="none"

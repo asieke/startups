@@ -17,36 +17,12 @@
 		title: string;
 	}
 
-	// VC Questions - exactly 20 as specified
-	const VC_QUESTIONS = [
-		"What is the problem you are solving?",
-		"Who is the target customer?",
-		"Why is this problem urgent or important for them?",
-		"How are they solving it today?",
-		"What makes your solution better or different?",
-		"What is your product or service concept?",
-		"Will customers pay to solve this problem?",
-		"How much do you think they would pay?",
-		"How many customers exist (TAM)?",
-		"Is this a one-time, subscription, or usage-based model?",
-		"What is your estimated customer acquisition cost (CAC)?",
-		"What channels would you use to acquire customers?",
-		"Who are the main competitors or alternatives?",
-		"What's your moat or defensibility?",
-		"Why is now the right time to build this?",
-		"What is the fastest way to test or prototype this?",
-		"What Fidelity assets give us an advantage (data, brand, relationships, etc.)?",
-		"Are there internal dependencies or blockers inside Fidelity?",
-		"Does this align with Fidelity's strategy and brand?",
-		"Could this realistically be a $100M+ business?"
-	];
-
 	// Chat state
-	let currentQuestionIndex = $state(0);
 	let messages = $state<Message[]>([]);
 	let userInput = $state('');
 	let isComplete = $state(false);
 	let isGeneratingMemo = $state(false);
+	let isGeneratingResponse = $state(false);
 	let generatedMemo = $state('');
 	
 	// Historical memos state
@@ -57,12 +33,14 @@
 	// Determine if we're in active chat mode
 	let isActiveChatMode = $derived(!isComplete && !selectedMemo && messages.length > 0);
 
-	// Initialize with first question
+	// Initialize with first message
 	$effect(() => {
 		if (messages.length === 0 && !selectedMemo) {
 			messages = [{
 				type: 'vc',
-				content: `Hello! I'm a VC partner and I'd like to understand your startup idea. I have 20 questions that will help us both evaluate the potential of your business. Let's start:\n\n${VC_QUESTIONS[0]}`
+				content: `Hello! I'm Sarah, a VC partner at a leading investment firm. I'm excited to learn about your startup idea and help you evaluate its potential. 
+
+Let's start with the basics - what problem are you trying to solve, and what's your solution? I'll ask follow-up questions based on your responses to get a complete picture of your business.`
 			}];
 		}
 	});
@@ -94,14 +72,16 @@
 
 	function startNewSession() {
 		selectedMemo = null;
-		currentQuestionIndex = 0;
 		messages = [{
 			type: 'vc',
-			content: `Hello! I'm a VC partner and I'd like to understand your startup idea. I have 20 questions that will help us both evaluate the potential of your business. Let's start:\n\n${VC_QUESTIONS[0]}`
+			content: `Hello! I'm Sarah, a VC partner at a leading investment firm. I'm excited to learn about your startup idea and help you evaluate its potential. 
+
+Let's start with the basics - what problem are you trying to solve, and what's your solution? I'll ask follow-up questions based on your responses to get a complete picture of your business.`
 		}];
 		userInput = '';
 		isComplete = false;
 		isGeneratingMemo = false;
+		isGeneratingResponse = false;
 		generatedMemo = '';
 	}
 
@@ -113,88 +93,84 @@
 		messages = memo.conversation || [];
 	}
 
-	function sendMessage() {
-		if (!userInput.trim()) return;
+	async function sendMessage() {
+		if (!userInput.trim() || isGeneratingResponse) return;
 
 		// Add user message
-		messages = [...messages, {
-			type: 'user',
+		const newUserMessage = {
+			type: 'user' as const,
 			content: userInput.trim()
-		}];
-
-		// Move to next question or finish
-		currentQuestionIndex++;
+		};
+		messages = [...messages, newUserMessage];
 		
-		if (currentQuestionIndex < VC_QUESTIONS.length) {
-			// Add next VC question
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: VC_QUESTIONS[currentQuestionIndex]
-				}];
-			}, 500);
-		} else {
-			// All questions done
-			isComplete = true;
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: "Excellent! That completes our evaluation session. I'm now generating a comprehensive startup memo based on our conversation..."
-				}];
-				generateStartupMemo();
-			}, 500);
-		}
-
+		const currentInput = userInput;
 		userInput = '';
-	}
+		isGeneratingResponse = true;
 
-	function handleDontKnow() {
-		messages = [...messages, {
-			type: 'user',
-			content: "I don't know"
-		}];
+		try {
+			// Generate AI response using the conversation context
+			const conversationHistory = messages.map(msg => 
+				`${msg.type === 'vc' ? 'VC Sarah' : 'Entrepreneur'}: ${msg.content}`
+			).join('\n\n');
 
-		currentQuestionIndex++;
-		
-		if (currentQuestionIndex < VC_QUESTIONS.length) {
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: `That's okay. Let's move on to the next question:\n\n${VC_QUESTIONS[currentQuestionIndex]}`
-				}];
-			}, 500);
-		} else {
-			isComplete = true;
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: "That completes our evaluation session. I'm now generating a comprehensive startup memo based on our conversation..."
-				}];
-				generateStartupMemo();
-			}, 500);
-		}
-	}
+			const systemPrompt = `You are Sarah, an experienced VC partner conducting a startup evaluation session. Your goal is to understand the business thoroughly through natural conversation.
 
-	function handleHelpWithResearch() {
-		messages = [...messages, {
-			type: 'user',
-			content: "Help with Research"
-		}];
+INSTRUCTIONS:
+1. Ask thoughtful follow-up questions based on the entrepreneur's responses
+2. Cover key areas: problem/solution, market, business model, competition, team, traction, financials, and growth strategy
+3. Be conversational and encouraging, but ask probing questions
+4. When you feel you have enough information for a comprehensive evaluation (usually after 8-12 exchanges), end with: "Thank you for sharing all these details about your startup. I now have enough information to prepare a comprehensive investment memo. Let me generate that for you."
+5. Don't ask more than 2-3 questions in a single response
+6. Be specific and dig into details that matter for investment decisions
 
-		setTimeout(() => {
+Current conversation:
+${conversationHistory}
+
+Entrepreneur: ${currentInput}
+
+Respond as VC Sarah with your next question or comment. If you believe you have enough information for an investment evaluation, indicate that you're ready to prepare the memo.`;
+
+			const response = await fetch('/api/flash', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ 
+					prompt: systemPrompt
+				})
+			});
+
+			const result = await response.json();
+			
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
+			// Add VC response
+			const vcResponse = result.text.trim();
 			messages = [...messages, {
 				type: 'vc',
-				content: `I understand you'd like help researching this aspect. For now, let's continue with what you know and we can revisit this during the memo generation. Moving to the next question:\n\n${VC_QUESTIONS[currentQuestionIndex + 1] || "That was our final question."}`
+				content: vcResponse
 			}];
-		}, 500);
 
-		currentQuestionIndex++;
-		
-		if (currentQuestionIndex >= VC_QUESTIONS.length) {
-			isComplete = true;
-			setTimeout(() => {
-				generateStartupMemo();
-			}, 1000);
+			// Check if VC is ready to generate memo
+			if (vcResponse.toLowerCase().includes('comprehensive investment memo') || 
+				vcResponse.toLowerCase().includes('generate that for you') ||
+				vcResponse.toLowerCase().includes('prepare a comprehensive investment memo')) {
+				isComplete = true;
+				setTimeout(() => {
+					generateStartupMemo();
+				}, 1000);
+			}
+
+		} catch (error) {
+			console.error('Error generating VC response:', error);
+			messages = [...messages, {
+				type: 'vc',
+				content: "I apologize, there was a technical issue. Could you please repeat your last response?"
+			}];
+		} finally {
+			isGeneratingResponse = false;
 		}
 	}
 
@@ -202,29 +178,33 @@
 		isGeneratingMemo = true;
 		
 		try {
-			// Bundle the conversation for the grounding endpoint
+			// Bundle the conversation for the memo generation
 			const conversationContext = messages
-				.map((msg, index) => `${msg.type === 'vc' ? 'VC' : 'Entrepreneur'}: ${msg.content}`)
+				.map((msg, index) => `${msg.type === 'vc' ? 'VC Sarah' : 'Entrepreneur'}: ${msg.content}`)
 				.join('\n\n');
 
-			const prompt = `Based on the following VC evaluation session with an entrepreneur, generate a comprehensive 2-page startup memo that outlines the business described. The memo should be professional, analytical, and follow standard VC memo format with sections for:
+			const prompt = `Based on the following comprehensive VC evaluation conversation with an entrepreneur, generate a detailed 2-page professional startup investment memo that follows standard VC memo format.
 
-1. Executive Summary
-2. Problem & Opportunity
-3. Solution & Product
-4. Market & Competition
-5. Business Model
-6. Go-to-Market Strategy
-7. Team & Execution
-8. Financial Projections
-9. Risks & Mitigation
-10. Investment Recommendation
+The memo should be thorough, analytical, and include:
 
-Here is the conversation:
+1. **Executive Summary** - Clear overview and recommendation
+2. **Problem & Opportunity** - Market problem and size
+3. **Solution & Product** - Product description and differentiation  
+4. **Market Analysis** - TAM, competition, positioning
+5. **Business Model** - Revenue streams, pricing, unit economics
+6. **Go-to-Market Strategy** - Customer acquisition and sales channels
+7. **Team Assessment** - Founder/team evaluation
+8. **Traction & Metrics** - Current progress and KPIs
+9. **Financial Projections** - Revenue forecasts and funding needs
+10. **Risk Assessment** - Key risks and mitigation strategies
+11. **Investment Recommendation** - Clear investment thesis and recommendation
 
+Use professional VC language, include specific data points mentioned in the conversation, and provide actionable insights. Format with clear markdown headers and bullet points.
+
+Conversation:
 ${conversationContext}
 
-Please format this as a professional startup evaluation memo that a VC would present to their investment committee. Use markdown formatting for headers, lists, and emphasis. Start with a clear title that captures the business concept.`;
+Generate a comprehensive investment memo:`;
 
 			const response = await fetch('/api/grounding', {
 				method: 'POST',
@@ -295,7 +275,7 @@ Please format this as a professional startup evaluation memo that a VC would pre
 	// Auto scroll to bottom when new messages arrive
 	let messagesContainer: HTMLDivElement;
 	$effect(() => {
-		if (messagesContainer && messages.length > 0 && !isComplete) {
+		if (messagesContainer && messages.length > 0) {
 			setTimeout(() => {
 				messagesContainer.scrollTop = messagesContainer.scrollHeight;
 			}, 100);
@@ -364,8 +344,8 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
 					<div class="bg-green-600 px-6 py-4 flex items-center justify-between">
 						<div>
-							<h2 class="text-xl font-bold text-white">Startup Evaluation Memo</h2>
-							<p class="text-green-100 mt-1">Professional investment analysis</p>
+							<h2 class="text-xl font-bold text-white">Investment Evaluation Memo</h2>
+							<p class="text-green-100 mt-1">Professional VC analysis and recommendation</p>
 						</div>
 						<div class="flex items-center space-x-3">
 							<Button onclick={startNewSession} variant="secondary" size="sm">
@@ -392,14 +372,14 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				<!-- Welcome state with historical memos -->
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center h-full flex flex-col justify-center">
 					<div class="mb-6">
-						<div class="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-							<svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+						<div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
 							</svg>
 						</div>
 						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to VC Validation</h3>
 						<p class="text-gray-600 max-w-md mx-auto">
-							Start a new validation session to evaluate your startup idea, or browse your previous evaluations from the sidebar.
+							Start a new validation session with our AI VC partner Sarah, or browse your previous evaluations from the sidebar.
 						</p>
 					</div>
 					<Button onclick={startNewSession}>
@@ -409,15 +389,15 @@ Please format this as a professional startup evaluation memo that a VC would pre
 			{:else}
 				<!-- Chat Interface -->
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
-					<div class="bg-indigo-600 px-6 py-4 flex-shrink-0">
+					<div class="bg-green-600 px-6 py-4 flex-shrink-0">
 						<div class="flex items-center justify-between">
 							<div class="flex-1">
-								<h2 class="text-xl font-bold text-white">VC Partner Discussion</h2>
-								<p class="text-indigo-100 mt-1">Professional startup evaluation session</p>
+								<h2 class="text-xl font-bold text-white">VC Partner Sarah</h2>
+								<p class="text-green-100 mt-1">Dynamic startup evaluation conversation</p>
 							</div>
 							<button 
 								onclick={() => showSidebar = !showSidebar}
-								class="rounded-lg bg-indigo-700 p-2 text-indigo-100 hover:bg-indigo-800 hover:text-white transition-colors ml-4"
+								class="rounded-lg bg-green-700 p-2 text-green-100 hover:bg-green-800 hover:text-white transition-colors ml-4"
 								title="Toggle sidebar"
 							>
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -425,22 +405,6 @@ Please format this as a professional startup evaluation memo that a VC would pre
 								</svg>
 							</button>
 						</div>
-						
-						<!-- Progress Bar in header -->
-						{#if isActiveChatMode}
-							<div class="mt-3">
-								<div class="flex items-center justify-between text-sm text-indigo-200 mb-2">
-									<span>Progress</span>
-									<span>Question {currentQuestionIndex + 1} of {VC_QUESTIONS.length}</span>
-								</div>
-								<div class="bg-indigo-700 h-2 rounded-full">
-									<div 
-										class="bg-white h-2 rounded-full transition-all duration-300" 
-										style="width: {((currentQuestionIndex + 1) / VC_QUESTIONS.length) * 100}%"
-									></div>
-								</div>
-							</div>
-						{/if}
 					</div>
 					
 					<!-- Messages Container -->
@@ -450,24 +414,36 @@ Please format this as a professional startup evaluation memo that a VC would pre
 					>
 						{#each messages as message, index (index)}
 							<div class="flex {message.type === 'user' ? 'justify-end' : 'justify-start'}">
-								<div class="max-w-lg {message.type === 'user' 
-									? 'bg-indigo-600 text-white' 
+								<div class="max-w-2xl {message.type === 'user' 
+									? 'bg-green-600 text-white' 
 									: 'bg-gray-100 text-gray-900'} rounded-lg px-4 py-3">
 									<div class="text-sm font-medium mb-1">
-										{message.type === 'user' ? 'You' : 'VC Partner'}
+										{message.type === 'user' ? 'You' : 'VC Sarah'}
 									</div>
 									<div class="whitespace-pre-wrap text-sm">{message.content}</div>
 								</div>
 							</div>
 						{/each}
 
+						{#if isGeneratingResponse}
+							<div class="flex justify-start">
+								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
+									<div class="text-sm font-medium mb-1">VC Sarah</div>
+									<div class="flex items-center space-x-2">
+										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+										<span class="text-sm">Thinking...</span>
+									</div>
+								</div>
+							</div>
+						{/if}
+
 						{#if isGeneratingMemo}
 							<div class="flex justify-start">
 								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">VC Partner</div>
+									<div class="text-sm font-medium mb-1">VC Sarah</div>
 									<div class="flex items-center space-x-2">
-										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-										<span class="text-sm">Generating your startup memo...</span>
+										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+										<span class="text-sm">Generating your investment memo...</span>
 									</div>
 								</div>
 							</div>
@@ -477,30 +453,18 @@ Please format this as a professional startup evaluation memo that a VC would pre
 					<!-- Input Area -->
 					{#if !isComplete}
 						<div class="border-t bg-gray-50 p-6 flex-shrink-0">
-							<div class="flex flex-col space-y-4">
-								<!-- Text Input -->
-								<div class="flex space-x-3">
-									<textarea
-										bind:value={userInput}
-										onkeydown={handleKeydown}
-										placeholder="Type your answer here..."
-										class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-										rows="3"
-									></textarea>
-									<Button onclick={sendMessage} disabled={!userInput.trim()}>
-										{#snippet children()}Send{/snippet}
-									</Button>
-								</div>
-
-								<!-- Action Buttons -->
-								<div class="flex space-x-3">
-									<Button variant="outline" onclick={handleDontKnow}>
-										{#snippet children()}I Don't Know{/snippet}
-									</Button>
-									<Button variant="outline" onclick={handleHelpWithResearch}>
-										{#snippet children()}Help with Research{/snippet}
-									</Button>
-								</div>
+							<div class="flex space-x-3">
+								<textarea
+									bind:value={userInput}
+									onkeydown={handleKeydown}
+									placeholder="Share details about your startup idea..."
+									class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+									rows="3"
+									disabled={isGeneratingResponse}
+								></textarea>
+								<Button onclick={sendMessage} disabled={!userInput.trim() || isGeneratingResponse}>
+									{#snippet children()}Send{/snippet}
+								</Button>
 							</div>
 						</div>
 					{/if}
@@ -563,7 +527,7 @@ Please format this as a professional startup evaluation memo that a VC would pre
 	}
 	
 	:global(.prose blockquote) {
-		border-left: 4px solid #6366f1;
+		border-left: 4px solid #16a34a;
 		padding-left: 1rem;
 		font-style: italic;
 		color: #4b5563;
