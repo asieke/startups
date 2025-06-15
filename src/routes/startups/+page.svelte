@@ -2,6 +2,7 @@
 	let { data } = $props();
 	let summaries = data.summaries;
 	let search = $state('');
+	let selectedTags = $state<Set<string>>(new Set<string>());
 
 	$inspect(summaries);
 
@@ -12,9 +13,39 @@
 		return parts.slice(0, 3).join(', ') + `... (+${parts.length - 3})`;
 	}
 
+	function toggleTag(tag: string) {
+		const newSelectedTags = new Set(selectedTags);
+		if (newSelectedTags.has(tag)) {
+			newSelectedTags.delete(tag);
+		} else {
+			newSelectedTags.add(tag);
+		}
+		selectedTags = newSelectedTags;
+	}
+
+	function removeTag(tag: string) {
+		const newSelectedTags = new Set(selectedTags);
+		newSelectedTags.delete(tag);
+		selectedTags = newSelectedTags;
+	}
+
 	let filteredSummaries = $derived(
 		summaries.filter((summary) => {
 			const q = search.toLowerCase();
+			
+			// Filter by selected tags first
+			if (selectedTags.size > 0) {
+				if (!summary.tags) return false;
+				const summaryTags = summary.tags.split(',').map((t: string) => t.trim());
+				const hasAllSelectedTags = [...selectedTags].every((selectedTag: string) =>
+					summaryTags.some((summaryTag: string) => 
+						summaryTag.toLowerCase() === selectedTag.toLowerCase()
+					)
+				);
+				if (!hasAllSelectedTags) return false;
+			}
+			
+			// Then filter by search query
 			if (!q) return true;
 			return (
 				summary.name?.toLowerCase().includes(q) ||
@@ -44,7 +75,7 @@
 							.includes(q))) ||
 				(summary.competitors &&
 					summary.competitors.some(
-						(comp) =>
+						(comp: any) =>
 							comp.name?.toLowerCase().includes(q) || comp.website?.toLowerCase().includes(q)
 					))
 			);
@@ -66,7 +97,31 @@
 			</div>
 		</div>
 
+		<!-- Selected Tags Display -->
+		{#if selectedTags.size > 0}
+			<div class="mt-4">
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-sm font-medium text-gray-700">Filtered by:</span>
+					{#each [...selectedTags] as tag}
+						<button
+							onclick={() => removeTag(tag)}
+							class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 transition-colors hover:bg-purple-200"
+						>
+							{tag}
+							<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+							</svg>
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		{#if search && filteredSummaries.length !== summaries.length}
+			<div class="mt-4 text-sm text-gray-600">
+				Showing {filteredSummaries.length} of {summaries.length} startups
+			</div>
+		{:else if selectedTags.size > 0}
 			<div class="mt-4 text-sm text-gray-600">
 				Showing {filteredSummaries.length} of {summaries.length} startups
 			</div>
@@ -170,9 +225,15 @@
 									.map((t) => t.trim())
 									.filter(Boolean)
 									.slice(0, 2) as tag}
-									<span class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+									{@const isSelected = selectedTags.has(tag)}
+									<button
+										onclick={() => toggleTag(tag)}
+										class="rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer {isSelected 
+											? 'bg-purple-200 text-purple-800' 
+											: 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:text-purple-700'}"
+									>
 										{tag}
-									</span>
+									</button>
 								{/each}
 								{#if summary.tags.split(',').length > 2}
 									<span class="text-xs text-gray-500">+{summary.tags.split(',').length - 2}</span>
