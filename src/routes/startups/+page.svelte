@@ -29,6 +29,15 @@
 		selectedTags = newSelectedTags;
 	}
 
+	// Create handler functions for each tag
+	function createRemoveTagHandler(tag: string) {
+		return () => removeTag(tag);
+	}
+
+	function createToggleTagHandler(tag: string) {
+		return () => toggleTag(tag);
+	}
+
 	let filteredSummaries = $derived(
 		summaries.filter((summary) => {
 			const q = search.toLowerCase();
@@ -103,8 +112,10 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<span class="text-sm font-medium text-gray-700">Filtered by:</span>
 					{#each [...selectedTags] as tag}
+						<!-- svelte-ignore a11y-click-events-have-key-events -->
+						<!-- svelte-ignore a11y-no-static-element-interactions -->
 						<button
-							onclick={() => removeTag(tag)}
+							onclick={createRemoveTagHandler(tag)}
 							class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 transition-colors hover:bg-purple-200"
 						>
 							{tag}
@@ -226,8 +237,10 @@
 									.filter(Boolean)
 									.slice(0, 2) as tag}
 									{@const isSelected = selectedTags.has(tag)}
+									<!-- svelte-ignore a11y-click-events-have-key-events -->
+									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<button
-										onclick={() => toggleTag(tag)}
+										onclick={createToggleTagHandler(tag)}
 										class="rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer {isSelected 
 											? 'bg-purple-200 text-purple-800' 
 											: 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:text-purple-700'}"
