@@ -37,6 +37,12 @@
 					>
 						Browse Startups
 					</a>
+					<a
+						href="/validation"
+						class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 {$page.url.pathname === '/validation' ? 'text-indigo-600 bg-indigo-50' : ''}"
+					>
+						VC Validation
+					</a>
 				</div>
 			</div>
 		</div>
