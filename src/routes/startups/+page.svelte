@@ -41,19 +41,19 @@
 	let filteredSummaries = $derived(
 		summaries.filter((summary) => {
 			const q = search.toLowerCase();
-			
+
 			// Filter by selected tags first
 			if (selectedTags.size > 0) {
 				if (!summary.tags) return false;
 				const summaryTags = summary.tags.split(',').map((t: string) => t.trim());
 				const hasAllSelectedTags = [...selectedTags].every((selectedTag: string) =>
-					summaryTags.some((summaryTag: string) => 
-						summaryTag.toLowerCase() === selectedTag.toLowerCase()
+					summaryTags.some(
+						(summaryTag: string) => summaryTag.toLowerCase() === selectedTag.toLowerCase()
 					)
 				);
 				if (!hasAllSelectedTags) return false;
 			}
-			
+
 			// Then filter by search query
 			if (!q) return true;
 			return (
@@ -112,15 +112,20 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<span class="text-sm font-medium text-gray-700">Filtered by:</span>
 					{#each [...selectedTags] as tag}
-						<!-- svelte-ignore a11y-click-events-have-key-events -->
-						<!-- svelte-ignore a11y-no-static-element-interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<button
 							onclick={createRemoveTagHandler(tag)}
 							class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 transition-colors hover:bg-purple-200"
 						>
 							{tag}
 							<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M6 18L18 6M6 6l12 12"
+								></path>
 							</svg>
 						</button>
 					{/each}
@@ -234,23 +239,19 @@
 								{#each summary.tags
 									.split(',')
 									.map((t) => t.trim())
-									.filter(Boolean)
-									.slice(0, 2) as tag}
+									.filter(Boolean) as tag}
 									{@const isSelected = selectedTags.has(tag)}
-									<!-- svelte-ignore a11y-click-events-have-key-events -->
-									<!-- svelte-ignore a11y-no-static-element-interactions -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
 									<button
 										onclick={createToggleTagHandler(tag)}
-										class="rounded px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer {isSelected 
-											? 'bg-purple-200 text-purple-800' 
+										class="cursor-pointer rounded px-2 py-0.5 text-xs font-medium transition-colors {isSelected
+											? 'bg-purple-200 text-purple-800'
 											: 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:text-purple-700'}"
 									>
 										{tag}
 									</button>
 								{/each}
-								{#if summary.tags.split(',').length > 2}
-									<span class="text-xs text-gray-500">+{summary.tags.split(',').length - 2}</span>
-								{/if}
 							</div>
 						{:else}
 							<span class="text-xs text-gray-400">No tags</span>
