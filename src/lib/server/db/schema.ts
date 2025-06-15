@@ -5,6 +5,7 @@ export const companies = sqliteTable('companies', {
 	companies: text('companies').notNull(),
 	markdown: text('markdown', { length: 1000000 }),
 	summary: text('summary', { mode: 'json' }),
+	embedding: text('embedding', { mode: 'json' }),
 	primary_contact_title: text('primary_contact_title'),
 	primary_contact_email: text('primary_contact_email'),
 	first_financing_valuation: integer('first_financing_valuation'),
@@ -41,6 +42,7 @@ export const companies = sqliteTable('companies', {
 
 export type Company = typeof companies.$inferSelect;
 export type Summary = {
+	similarity?: number;
 	name: string;
 	description: string;
 	tags: string;

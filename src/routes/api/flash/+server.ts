@@ -15,8 +15,6 @@ export const POST: RequestHandler = async ({ request }) => {
     // Extract the prompt from the request body
     const { prompt, schema } = await request.json();
 
-    console.log(schema);
-
     // Initialize the Google Gemini AI client with API key from environment variables
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 

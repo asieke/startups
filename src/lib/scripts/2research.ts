@@ -1,6 +1,6 @@
 import { db } from '../server/db/index.js';
 import { companies, type Company } from '../server/db/schema';
-import { groundedSearch, flashSearch } from './llm';
+import { groundedSearch, flashSearch, getEmbedding } from '../ai/llm.js';
 import { eq, or, isNull } from 'drizzle-orm';
 import { Type } from '@google/genai';
 
@@ -61,7 +61,7 @@ const schema = {
     },
     description: {
       type: Type.STRING,
-      description: "Do not use any extraneous words. Immediately provide a very succinct summary of what the company does.",
+      description: "Do not use any extraneous words. Immediately provide a very succinct summary of what the company does.  It should be between 2-3 sentences long and articulate the offering, the problem it solves and who the customer is.",
     },
     target_customer: {
       type: Type.STRING,
@@ -108,16 +108,26 @@ async function researchCompany(company: Company): Promise<boolean> {
         total: company.total_raised,
         valuation: company.last_financing_valuation
       }
+      summary.industry = company.primary_industry_code;
       summary.investors = company.active_investors;
       summary.linkedin = company.linkedin_url;
       summary.website = company.website;
       summary.employees = company.employees;
       summary.hq = company.hq_location;
       summary.founded = company.year_founded;
+      summary.verticals = company.verticals;
+
+      const embedding = await getEmbedding(`
+        Name: ${summary.name}
+        Description: ${summary.description}
+        Target Customer: ${summary.target_customer}
+        Industry: ${summary.industry}
+        Verticals: ${summary.verticals}
+      `)
 
 
       await db.update(companies)
-        .set({ markdown: result.text, summary: summary })
+        .set({ markdown: result.text, summary: summary, embedding: embedding })
         .where(eq(companies.company_id, company.company_id));
 
 
@@ -142,6 +152,7 @@ function getPrompt(company: Company) {
    Founder: ${company?.primary_contact}
    Description: ${company?.description}
    Website: ${company?.website}
+   Verticals: ${company?.verticals}
    Competitors: ${company?.competitors}
    Industry: ${company?.primary_industry_code}
    Location: ${company?.hq_location}

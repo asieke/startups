@@ -42,3 +42,24 @@ export const flashSearch = async (prompt: string, schema: any) => {
   }
 };
 
+export const getEmbedding = async (prompt: string) => {
+  try {
+    const response = await fetch('http://localhost:5173/api/embedding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prompt })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return data.embedding[0].values;
+  } catch (error: any) {
+    return null;
+  }
+};
