@@ -43,9 +43,11 @@
 	"dependencies": {
 		"@google/genai": "^1.5.1",
 		"@libsql/client": "^0.14.0",
+		"@types/marked": "^5.0.2",
 		"@types/papaparse": "^5.3.16",
 		"dotenv": "^16.5.0",
 		"drizzle-orm": "^0.40.0",
+		"marked": "^15.0.12",
 		"papaparse": "^5.5.3",
 		"vite-node": "^3.2.3"
 	}

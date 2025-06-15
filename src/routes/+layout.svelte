@@ -6,8 +6,8 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<!-- Modern Top Navigation -->
-	<nav class="bg-white shadow-sm border-b border-gray-200">
+	<!-- Fixed Top Navigation -->
+	<nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-200">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
 				<!-- Logo/Brand -->
@@ -37,13 +37,19 @@
 					>
 						Browse Startups
 					</a>
+					<a
+						href="/validation"
+						class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 {$page.url.pathname === '/validation' ? 'text-indigo-600 bg-indigo-50' : ''}"
+					>
+						VC Validation
+					</a>
 				</div>
 			</div>
 		</div>
 	</nav>
 
-	<!-- Main Content -->
-	<main class="flex-1">
+	<!-- Main Content with top padding to account for fixed nav -->
+	<main class="pt-16">
 		{@render children()}
 	</main>
 </div>
