@@ -136,7 +136,17 @@ Respond as VC Sarah with your next question or comment. If you believe you have 
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({ 
-					prompt: systemPrompt
+					prompt: systemPrompt,
+					schema: {
+						type: 'object',
+						properties: {
+							response: {
+								type: 'string',
+								description: 'VC Sarah\'s response to the entrepreneur'
+							}
+						},
+						required: ['response']
+					}
 				})
 			});
 
@@ -146,11 +156,20 @@ Respond as VC Sarah with your next question or comment. If you believe you have 
 				throw new Error(result.error);
 			}
 
+			// Parse the JSON response and extract the actual text
+			let vcResponse;
+			try {
+				const parsedResponse = JSON.parse(result.text);
+				vcResponse = parsedResponse.response || result.text;
+			} catch (parseError) {
+				// If parsing fails, use the raw text
+				vcResponse = result.text;
+			}
+
 			// Add VC response
-			const vcResponse = result.text.trim();
 			messages = [...messages, {
 				type: 'vc',
-				content: vcResponse
+				content: vcResponse.trim()
 			}];
 
 			// Check if VC is ready to generate memo
