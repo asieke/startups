@@ -6,8 +6,8 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<!-- Modern Top Navigation -->
-	<nav class="bg-white shadow-sm border-b border-gray-200">
+	<!-- Fixed Top Navigation -->
+	<nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-200">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
 				<!-- Logo/Brand -->
@@ -48,8 +48,8 @@
 		</div>
 	</nav>
 
-	<!-- Main Content -->
-	<main class="flex-1">
+	<!-- Main Content with top padding to account for fixed nav -->
+	<main class="pt-16">
 		{@render children()}
 	</main>
 </div>
