@@ -54,6 +54,9 @@
 	let selectedMemo = $state<MemoData | null>(null);
 	let showSidebar = $state(true);
 
+	// Determine if we're in active chat mode
+	let isActiveChatMode = $derived(!isComplete && !selectedMemo && messages.length > 0);
+
 	// Initialize with first question
 	$effect(() => {
 		if (messages.length === 0 && !selectedMemo) {
@@ -221,7 +224,7 @@ Here is the conversation:
 
 ${conversationContext}
 
-Please format this as a professional startup evaluation memo that a VC would present to their investment committee. Use markdown formatting for headers, lists, and emphasis.`;
+Please format this as a professional startup evaluation memo that a VC would present to their investment committee. Use markdown formatting for headers, lists, and emphasis. Start with a clear title that captures the business concept.`;
 
 			const response = await fetch('/api/grounding', {
 				method: 'POST',
@@ -268,7 +271,9 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				return line.replace(/^#+\s*/, '').trim();
 			}
 		}
-		return `Session ${new Date().toLocaleDateString()}`;
+		// Try to extract from first few words if no heading found
+		const words = memo.split(' ').slice(0, 8).join(' ');
+		return words || `Startup Evaluation - ${new Date().toLocaleDateString()}`;
 	}
 
 	function formatDate(timestamp: string): string {
@@ -316,20 +321,20 @@ Please format this as a professional startup evaluation memo that a VC would pre
 	}
 </script>
 
-<!-- Fixed Layout Structure -->
-<div class="h-screen bg-gray-50 flex flex-col">
-	<!-- Fixed Header -->
-	<div class="bg-indigo-600 px-6 py-4 flex-shrink-0">
+<!-- Main Container with proper spacing like other pages -->
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+	<!-- Page Header -->
+	<div class="mb-8">
 		<div class="flex items-center justify-between">
 			<div>
-				<h1 class="text-2xl font-bold text-white">VC Validation Session</h1>
-				<p class="text-indigo-100 mt-1">
+				<h1 class="text-2xl font-bold text-gray-900">VC Validation Session</h1>
+				<p class="mt-1 text-gray-600">
 					{#if selectedMemo}
 						Historical Session - {formatDate(selectedMemo.timestamp)}
 					{:else if !isComplete}
-						Question {currentQuestionIndex + 1} of {VC_QUESTIONS.length}
+						Answer 20 key questions to validate your startup idea
 					{:else if generatedMemo}
-						Session Complete - Memo Generated
+						Professional startup memo generated
 					{:else}
 						Session Complete
 					{/if}
@@ -343,94 +348,122 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				{/if}
 				<button 
 					onclick={() => showSidebar = !showSidebar}
-					class="text-white hover:text-indigo-200 transition-colors"
+					class="rounded-lg bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+					title="Toggle sidebar"
 				>
-					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
 					</svg>
 				</button>
 			</div>
 		</div>
 
-		<!-- Progress Bar -->
-		{#if !isComplete && !selectedMemo}
-			<div class="bg-indigo-700 h-2 rounded-full mt-4">
-				<div 
-					class="bg-white h-2 rounded-full transition-all duration-300" 
-					style="width: {((currentQuestionIndex + 1) / VC_QUESTIONS.length) * 100}%"
-				></div>
+		<!-- Progress Bar - only show during active chat -->
+		{#if isActiveChatMode}
+			<div class="mt-4">
+				<div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+					<span>Progress</span>
+					<span>Question {currentQuestionIndex + 1} of {VC_QUESTIONS.length}</span>
+				</div>
+				<div class="bg-gray-200 h-2 rounded-full">
+					<div 
+						class="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+						style="width: {((currentQuestionIndex + 1) / VC_QUESTIONS.length) * 100}%"
+					></div>
+				</div>
 			</div>
 		{/if}
 	</div>
 
-	<!-- Main Content Area -->
-	<div class="flex-1 flex overflow-hidden">
+	<!-- Main Content Layout -->
+	<div class="flex gap-8">
 		<!-- Sidebar for Historical Memos -->
 		{#if showSidebar}
-			<div class="w-80 bg-white border-r border-gray-200 flex flex-col">
-				<div class="p-4 border-b border-gray-200">
-					<h2 class="text-lg font-semibold text-gray-900">Historical Memos</h2>
-				</div>
-				<div class="flex-1 overflow-y-auto">
-					{#if historicalMemos.length === 0}
-						<div class="p-4 text-gray-500 text-sm">
-							No previous sessions yet. Complete a session to see your memos here.
-						</div>
-					{:else}
-						{#each historicalMemos as memo}
-							<button
-								onclick={() => selectMemo(memo)}
-								class="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedMemo?.id === memo.id ? 'bg-indigo-50 border-indigo-200' : ''}"
-							>
-								<div class="font-medium text-gray-900 text-sm truncate">
-									{memo.title || 'Untitled Session'}
-								</div>
-								<div class="text-xs text-gray-500 mt-1">
-									{formatDate(memo.timestamp)}
-								</div>
-							</button>
-						{/each}
-					{/if}
+			<div class="w-80 flex-shrink-0">
+				<div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+					<div class="p-4 border-b border-gray-200">
+						<h2 class="text-lg font-semibold text-gray-900">Historical Memos</h2>
+					</div>
+					<div class="max-h-96 overflow-y-auto">
+						{#if historicalMemos.length === 0}
+							<div class="p-4 text-gray-500 text-sm">
+								No previous sessions yet. Complete a session to see your memos here.
+							</div>
+						{:else}
+							{#each historicalMemos as memo}
+								<button
+									onclick={() => selectMemo(memo)}
+									class="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedMemo?.id === memo.id ? 'bg-indigo-50 border-indigo-200' : ''}"
+								>
+									<div class="font-medium text-gray-900 text-sm truncate">
+										{memo.title || 'Untitled Session'}
+									</div>
+									<div class="text-xs text-gray-500 mt-1">
+										{formatDate(memo.timestamp)}
+									</div>
+								</button>
+							{/each}
+						{/if}
+					</div>
 				</div>
 			</div>
 		{/if}
 
-		<!-- Main Content -->
-		<div class="flex-1 flex flex-col">
+		<!-- Main Content Area -->
+		<div class="flex-1">
 			{#if generatedMemo}
 				<!-- Memo Display -->
-				<div class="flex-1 overflow-y-auto">
-					<div class="max-w-4xl mx-auto p-6">
-						<div class="bg-white rounded-xl shadow-lg overflow-hidden">
-							<div class="bg-green-600 px-6 py-4">
-								<h2 class="text-2xl font-bold text-white">Startup Evaluation Memo</h2>
-								<p class="text-green-100 mt-1">Professional investment analysis</p>
-							</div>
-							<div class="p-8">
-								<div class="prose max-w-none">
-									{@html renderMarkdown(generatedMemo)}
-								</div>
-							</div>
+				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+					<div class="bg-green-600 px-6 py-4">
+						<h2 class="text-xl font-bold text-white">Startup Evaluation Memo</h2>
+						<p class="text-green-100 mt-1">Professional investment analysis</p>
+					</div>
+					<div class="p-8">
+						<div class="prose max-w-none">
+							{@html renderMarkdown(generatedMemo)}
 						</div>
 					</div>
 				</div>
+			{:else if messages.length === 0 && historicalMemos.length > 0}
+				<!-- Welcome state with historical memos -->
+				<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
+					<div class="mb-6">
+						<div class="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+							</svg>
+						</div>
+						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to VC Validation</h3>
+						<p class="text-gray-600 max-w-md mx-auto">
+							Start a new validation session to evaluate your startup idea, or browse your previous evaluations from the sidebar.
+						</p>
+					</div>
+					<Button onclick={startNewSession}>
+						{#snippet children()}Start New Validation Session{/snippet}
+					</Button>
+				</div>
 			{:else}
 				<!-- Chat Interface -->
-				<div class="flex-1 flex flex-col">
+				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+					<div class="bg-indigo-600 px-6 py-4">
+						<h2 class="text-xl font-bold text-white">VC Partner Discussion</h2>
+						<p class="text-indigo-100 mt-1">Professional startup evaluation session</p>
+					</div>
+					
 					<!-- Messages Container -->
 					<div 
 						bind:this={messagesContainer}
-						class="flex-1 overflow-y-auto p-6 space-y-4"
+						class="h-96 overflow-y-auto p-6 space-y-4"
 					>
 						{#each messages as message, index (index)}
 							<div class="flex {message.type === 'user' ? 'justify-end' : 'justify-start'}">
-								<div class="max-w-3xl {message.type === 'user' 
+								<div class="max-w-lg {message.type === 'user' 
 									? 'bg-indigo-600 text-white' 
 									: 'bg-gray-100 text-gray-900'} rounded-lg px-4 py-3">
 									<div class="text-sm font-medium mb-1">
 										{message.type === 'user' ? 'You' : 'VC Partner'}
 									</div>
-									<div class="whitespace-pre-wrap">{message.content}</div>
+									<div class="whitespace-pre-wrap text-sm">{message.content}</div>
 								</div>
 							</div>
 						{/each}
@@ -441,7 +474,7 @@ Please format this as a professional startup evaluation memo that a VC would pre
 									<div class="text-sm font-medium mb-1">VC Partner</div>
 									<div class="flex items-center space-x-2">
 										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-										<span>Generating your startup memo...</span>
+										<span class="text-sm">Generating your startup memo...</span>
 									</div>
 								</div>
 							</div>
@@ -450,7 +483,7 @@ Please format this as a professional startup evaluation memo that a VC would pre
 
 					<!-- Input Area -->
 					{#if !isComplete}
-						<div class="border-t bg-gray-50 p-6 flex-shrink-0">
+						<div class="border-t bg-gray-50 p-6">
 							<div class="flex flex-col space-y-4">
 								<!-- Text Input -->
 								<div class="flex space-x-3">
