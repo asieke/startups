@@ -1,43 +1,65 @@
 import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
-export const user = sqliteTable('user', {
-	id: integer('id').primaryKey(),
-	age: integer('age')
+export const companies = sqliteTable('companies', {
+	company_id: text('company_id').primaryKey(),
+	companies: text('companies').notNull(),
+	markdown: text('markdown', { length: 1000000 }),
+	summary: text('summary', { mode: 'json' }),
+	primary_contact_title: text('primary_contact_title'),
+	primary_contact_email: text('primary_contact_email'),
+	first_financing_valuation: integer('first_financing_valuation'),
+	first_financing_size: integer('first_financing_size'),
+	last_financing_status: text('last_financing_status'),
+	first_financing_date: text('first_financing_date'),
+	employee_history: text('employee_history'),
+	business_status: text('business_status'),
+	keywords: text('keywords'),
+	last_known_valuation_date: text('last_known_valuation_date'),
+	last_known_valuation: integer('last_known_valuation'),
+	last_financing_valuation: integer('last_financing_valuation'),
+	total_raised: integer('total_raised'),
+	universe: text('universe'),
+	emerging_spaces: text('emerging_spaces'),
+	linkedin_url: text('linkedin_url'),
+	competitors: text('competitors'),
+	financing_status_note: text('financing_status_note'),
+	primary_industry_code: text('primary_industry_code'),
+	description: text('description'),
+	verticals: text('verticals'),
+	last_financing_date: text('last_financing_date'),
+	last_financing_size: integer('last_financing_size'),
+	last_financing_deal_type: text('last_financing_deal_type'),
+	active_investors: text('active_investors'),
+	company_financing_status: text('company_financing_status'),
+	employees: integer('employees'),
+	primary_contact: text('primary_contact'),
+	ownership_status: text('ownership_status'),
+	year_founded: integer('year_founded'),
+	hq_location: text('hq_location'),
+	website: text('website')
 });
 
-export const companies = sqliteTable('companies', {
-	company_id: text('Company ID').primaryKey(),
-	companies: text('Companies'),
-	primary_contact_title: text('Primary Contact Title'),
-	primary_contact_email: text('Primary Contact Email'),
-	first_financing_valuation: text('First Financing Valuation'),
-	first_financing_size: text('First Financing Size'),
-	last_financing_status: text('Last Financing Status'),
-	first_financing_date: text('First Financing Date'),
-	employee_history: text('Employee History'),
-	business_status: text('Business Status'),
-	keywords: text('Keywords'),
-	last_known_valuation_date: text('Last Known Valuation Date'),
-	last_known_valuation: text('Last Known Valuation'),
-	last_financing_valuation: text('Last Financing Valuation'),
-	total_raised: text('Total Raised'),
-	universe: text('Universe'),
-	emerging_spaces: text('Emerging Spaces'),
-	linkedin_url: text('LinkedIn URL'),
-	competitors: text('Competitors'),
-	financing_status_note: text('Financing Status Note'),
-	primary_industry_code: text('Primary Industry Code'),
-	description: text('Description'),
-	verticals: text('Verticals'),
-	last_financing_date: text('Last Financing Date'),
-	last_financing_size: text('Last Financing Size'),
-	last_financing_deal_type: text('Last Financing Deal Type'),
-	active_investors: text('Active Investors'),
-	company_financing_status: text('Company Financing Status'),
-	employees: integer('Employees'),
-	primary_contact: text('Primary Contact'),
-	ownership_status: text('Ownership Status'),
-	year_founded: integer('Year Founded'),
-	hq_location: text('HQ Location'),
-	website: text('Website')
-});
+export type Company = typeof companies.$inferSelect;
+export type Summary = {
+	name: string;
+	description: string;
+	tags: string;
+	target_customer: string;
+	competitors: {
+		name: string;
+		website: string;
+	}[];
+	funding: {
+		last_date: string;
+		size: number;
+		type: string;
+		total: number;
+		valuation: number;
+	};
+	investors: string;
+	linkedin: string;
+	website: string;
+	employees: number;
+	hq: string;
+	founded: number;
+};
