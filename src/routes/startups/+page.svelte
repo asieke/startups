@@ -8,8 +8,8 @@
 	function limitedInvestors(investors: string) {
 		if (!investors) return '';
 		const parts = investors.split(',').map((s) => s.trim());
-		if (parts.length <= 5) return parts.join(', ');
-		return parts.slice(0, 5).join(', ') + '...';
+		if (parts.length <= 3) return parts.join(', ');
+		return parts.slice(0, 3).join(', ') + `... (+${parts.length - 3})`;
 	}
 
 	let filteredSummaries = $derived(
@@ -52,87 +52,168 @@
 	);
 </script>
 
-<div class="relative h-screen w-full">
-	<div class="absolute top-0 left-0 flex h-16 w-full items-center justify-center">
-		<input
-			type="text"
-			placeholder="Search startups..."
-			class="w-full max-w-md rounded border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-200 focus:outline-none"
-			bind:value={search}
-		/>
-	</div>
-	<div
-		class="absolute top-20 right-8 left-8 flex h-12 divide-x divide-gray-200 border-t border-r border-b border-l border-gray-200 bg-purple-200"
-	>
-		<div class="flex w-[10%] items-center justify-center">Company Name</div>
-		<div class="flex w-[13%] items-center justify-center">Funding</div>
-		<div class="flex w-[25%] items-center justify-center">Description</div>
-		<div class="flex w-[15%] items-center justify-center">Customer</div>
-		<div class="flex w-[15%] items-center justify-center">Tags</div>
-		<div class="flex w-[13%] items-center justify-center">Investors</div>
-		<div class="flex w-[9%] items-center justify-center">Industry</div>
-	</div>
-	<div class="absolute top-32 right-8 bottom-0 left-8 flex flex-col overflow-y-auto">
-		{#each filteredSummaries as summary}
-			<div
-				class="flex w-full divide-x divide-gray-200 border-r border-b border-l border-gray-200 text-xs"
-			>
-				<div class="flex h-[125px] w-[10%] flex-col gap-1 overflow-hidden p-3">
-					<a
-						href={`https://${summary.website}`}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="font-bold"
-					>
-						{summary.name}
-					</a>
-					{#if summary.linkedin}
-						<a
-							href={summary.linkedin}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="text-xs text-blue-200 underline">LinkedIn</a
-						>
-					{/if}
-				</div>
-				<div class="flex h-[125px] w-[13%] overflow-hidden p-[5px]">
-					{#if summary.funding}
-						<div>
-							{summary.funding.last_date}<br />
-							{summary.funding.type} (${summary.funding.size}M)<br />
-							Valuation: ${summary.funding.valuation}M
-						</div>
-					{:else}
-						—
-					{/if}
-				</div>
-				<div class="flex h-[125px] w-[25%] overflow-hidden p-[5px]">{summary.description}</div>
-				<div class="flex h-[125px] w-[15%] overflow-hidden p-[5px]">{summary.target_customer}</div>
-				<div class="flex h-[125px] w-[15%] flex-wrap items-center gap-1 overflow-hidden p-[5px]">
-					{#if summary.tags}
-						{#each summary.tags
-							.split(',')
-							.map((t) => t.trim())
-							.filter(Boolean) as tag}
-							<span
-								class="mr-1 mb-1 inline-block rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-gray-800 shadow-sm transition-colors duration-200 hover:bg-gray-200"
-								aria-label={`Tag: ${tag}`}>{tag}</span
-							>
-						{/each}
-					{:else}
-						<span
-							class="mr-1 mb-1 inline-block rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-gray-800 shadow-sm transition-colors duration-200 hover:bg-gray-200"
-							aria-label="No tags">—</span
-						>
-					{/if}
-				</div>
-				<div class="flex h-[125px] w-[13%] overflow-hidden p-[5px]">
-					{limitedInvestors(summary.investors)}
-				</div>
-				<div class="flex h-[125px] w-[9%] overflow-hidden p-[5px]">{summary.industry}</div>
+<div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+	<!-- Header Section -->
+	<div class="mb-8">
+		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Browse Startups</h1>
+				<p class="text-gray-600 mt-1">
+					Explore {summaries.length} startups with detailed funding and market information
+				</p>
 			</div>
-		{/each}
+			<div class="w-full sm:w-auto sm:max-w-md">
+				<input
+					type="text"
+					placeholder="Search startups, tags, investors..."
+					class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-colors"
+					bind:value={search}
+				/>
+			</div>
+		</div>
+		
+		{#if search && filteredSummaries.length !== summaries.length}
+			<div class="mt-4 text-sm text-gray-600">
+				Showing {filteredSummaries.length} of {summaries.length} startups
+			</div>
+		{/if}
 	</div>
+
+	<!-- Table Header -->
+	<div class="bg-white rounded-t-lg shadow-sm border border-gray-200 overflow-hidden">
+		<div class="bg-gray-50 border-b border-gray-200">
+			<div class="grid grid-cols-12 gap-4 px-6 py-4 text-sm font-semibold text-gray-700">
+				<div class="col-span-3 md:col-span-2">Company</div>
+				<div class="col-span-3 md:col-span-2">Funding</div>
+				<div class="col-span-6 md:col-span-3">Description</div>
+				<div class="hidden md:block md:col-span-2">Customer</div>
+				<div class="hidden md:block md:col-span-2">Tags</div>
+				<div class="hidden md:block md:col-span-1">Details</div>
+			</div>
+		</div>
+
+		<!-- Table Body -->
+		<div class="divide-y divide-gray-200 max-h-[calc(100vh-300px)] overflow-y-auto">
+			{#each filteredSummaries as summary, index}
+				<div class="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors {index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}">
+					<!-- Company -->
+					<div class="col-span-3 md:col-span-2">
+						<div class="space-y-1">
+							{#if summary.website}
+								<a
+									href={`https://${summary.website}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="font-semibold text-gray-900 hover:text-indigo-600 transition-colors text-sm"
+								>
+									{summary.name}
+								</a>
+							{:else}
+								<div class="font-semibold text-gray-900 text-sm">{summary.name}</div>
+							{/if}
+							{#if summary.linkedin}
+								<a
+									href={summary.linkedin}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="text-xs text-indigo-600 hover:text-indigo-700 block"
+								>
+									LinkedIn →
+								</a>
+							{/if}
+							{#if summary.hq || summary.founded}
+								<div class="text-xs text-gray-500 space-y-0.5">
+									{#if summary.hq}<div>📍 {summary.hq}</div>{/if}
+									{#if summary.founded}<div>🗓️ {summary.founded}</div>{/if}
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Funding -->
+					<div class="col-span-3 md:col-span-2">
+						{#if summary.funding}
+							<div class="space-y-1 text-xs">
+								{#if summary.funding.last_date}
+									<div class="font-medium text-gray-900">{summary.funding.last_date}</div>
+								{/if}
+								{#if summary.funding.type}
+									<div class="text-indigo-600 font-medium">{summary.funding.type}</div>
+								{/if}
+								{#if summary.funding.size}
+									<div class="text-gray-700">${summary.funding.size}M</div>
+								{/if}
+								{#if summary.funding.valuation}
+									<div class="text-gray-600">Val: ${summary.funding.valuation}M</div>
+								{/if}
+							</div>
+						{:else}
+							<span class="text-gray-400 text-xs">No funding data</span>
+						{/if}
+					</div>
+
+					<!-- Description -->
+					<div class="col-span-6 md:col-span-3">
+						<p class="text-sm text-gray-700 line-clamp-3">{summary.description}</p>
+					</div>
+
+					<!-- Customer (hidden on mobile) -->
+					<div class="hidden md:block md:col-span-2">
+						<p class="text-sm text-gray-600 line-clamp-2">{summary.target_customer || 'N/A'}</p>
+					</div>
+
+					<!-- Tags (hidden on mobile) -->
+					<div class="hidden md:block md:col-span-2">
+						{#if summary.tags}
+							<div class="flex flex-wrap gap-1">
+								{#each summary.tags
+									.split(',')
+									.map((t) => t.trim())
+									.filter(Boolean)
+									.slice(0, 2) as tag}
+									<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+										{tag}
+									</span>
+								{/each}
+								{#if summary.tags.split(',').length > 2}
+									<span class="text-xs text-gray-500">+{summary.tags.split(',').length - 2}</span>
+								{/if}
+							</div>
+						{:else}
+							<span class="text-gray-400 text-xs">No tags</span>
+						{/if}
+					</div>
+
+					<!-- Details (hidden on mobile) -->
+					<div class="hidden md:block md:col-span-1">
+						{#if summary.investors}
+							<div class="text-xs text-gray-600">
+								<div class="font-medium mb-1">Investors:</div>
+								<div class="text-gray-500">{limitedInvestors(summary.investors)}</div>
+							</div>
+						{/if}
+						{#if summary.industry}
+							<div class="text-xs text-gray-500 mt-2">
+								{summary.industry}
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+	</div>
+
+	{#if filteredSummaries.length === 0}
+		<div class="text-center py-12">
+			<div class="text-gray-400 mb-4">
+				<svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33"></path>
+				</svg>
+			</div>
+			<h3 class="text-lg font-medium text-gray-900 mb-2">No startups found</h3>
+			<p class="text-gray-500">Try adjusting your search terms or clear the search to see all startups.</p>
+		</div>
+	{/if}
 </div>
 
 <style lang="postcss">
