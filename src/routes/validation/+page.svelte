@@ -38,9 +38,9 @@
 		if (messages.length === 0 && !selectedMemo) {
 			messages = [{
 				type: 'vc',
-				content: `Hello! I'm Sarah, a VC partner at a leading investment firm. I'm excited to learn about your startup idea and help you evaluate its potential. 
+				content: `Hello! I'm Sarah, a VC partner at Fidelity Labs, our corporate innovation incubator. I'm excited to work with you as one of our Entrepreneurs in Residence to evaluate your startup concept for potential development as a wholly owned Fidelity venture.
 
-Let's start with the basics - what problem are you trying to solve, and what's your solution? I'll ask follow-up questions based on your responses to get a complete picture of your business.`
+As we explore your idea, I'll be considering how it aligns with Fidelity's strategic priorities, leverages our unique assets, and fits within our innovation portfolio. Let's start with the fundamentals - what problem are you looking to solve, and how does your proposed solution address it?`
 			}];
 		}
 	});
@@ -54,7 +54,7 @@ Let's start with the basics - what problem are you trying to solve, and what's y
 		const memos: MemoData[] = [];
 		for (let i = 0; i < localStorage.length; i++) {
 			const key = localStorage.key(i);
-			if (key?.startsWith('vc-session-')) {
+			if (key?.startsWith('fidelity-labs-session-')) {
 				try {
 					const data = JSON.parse(localStorage.getItem(key) || '');
 					memos.push({
@@ -74,9 +74,9 @@ Let's start with the basics - what problem are you trying to solve, and what's y
 		selectedMemo = null;
 		messages = [{
 			type: 'vc',
-			content: `Hello! I'm Sarah, a VC partner at a leading investment firm. I'm excited to learn about your startup idea and help you evaluate its potential. 
+			content: `Hello! I'm Sarah, a VC partner at Fidelity Labs, our corporate innovation incubator. I'm excited to work with you as one of our Entrepreneurs in Residence to evaluate your startup concept for potential development as a wholly owned Fidelity venture.
 
-Let's start with the basics - what problem are you trying to solve, and what's your solution? I'll ask follow-up questions based on your responses to get a complete picture of your business.`
+As we explore your idea, I'll be considering how it aligns with Fidelity's strategic priorities, leverages our unique assets, and fits within our innovation portfolio. Let's start with the fundamentals - what problem are you looking to solve, and how does your proposed solution address it?`
 		}];
 		userInput = '';
 		isComplete = false;
@@ -110,25 +110,42 @@ Let's start with the basics - what problem are you trying to solve, and what's y
 		try {
 			// Generate AI response using the conversation context
 			const conversationHistory = messages.map(msg => 
-				`${msg.type === 'vc' ? 'VC Sarah' : 'Entrepreneur'}: ${msg.content}`
+				`${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`
 			).join('\n\n');
 
-			const systemPrompt = `You are Sarah, an experienced VC partner conducting a startup evaluation session. Your goal is to understand the business thoroughly through natural conversation.
+			const systemPrompt = `You are Sarah, a VC partner at Fidelity Labs, the corporate innovation incubator at Fidelity Investments. You are conducting a startup evaluation session with an Entrepreneur in Residence (EIR) who is proposing a new venture to be developed as a wholly owned Fidelity startup.
+
+CONTEXT:
+- The entrepreneur is a Fidelity EIR, not an external founder
+- Any venture will be wholly owned by Fidelity, not an external investment
+- You need to evaluate strategic fit with Fidelity's business and brand
+- Consider how Fidelity's assets (data, customer base, brand, relationships, technology) can provide competitive advantage
+
+EVALUATION AREAS TO COVER:
+1. Problem/Solution: What customer problem does this solve? How does the solution work?
+2. Market Opportunity: Size, growth, and strategic importance to Fidelity
+3. Fidelity Strategic Alignment: How does this fit Fidelity's priorities and brand?
+4. Fidelity Asset Leverage: What unique Fidelity assets give this venture an advantage?
+5. Business Model: Revenue potential, pricing, unit economics
+6. Competition: Competitive landscape and our defensible position
+7. Go-to-Market: Customer acquisition strategy, distribution channels
+8. Team & Execution: EIR background and execution plan
+9. Internal Dependencies: What Fidelity resources, partnerships, or approvals are needed?
+10. Scalability: Can this realistically become a $100M+ business for Fidelity?
 
 INSTRUCTIONS:
-1. Ask thoughtful follow-up questions based on the entrepreneur's responses
-2. Cover key areas: problem/solution, market, business model, competition, team, traction, financials, and growth strategy
-3. Be conversational and encouraging, but ask probing questions
-4. When you feel you have enough information for a comprehensive evaluation (usually after 8-12 exchanges), end with: "Thank you for sharing all these details about your startup. I now have enough information to prepare a comprehensive investment memo. Let me generate that for you."
-5. Don't ask more than 2-3 questions in a single response
-6. Be specific and dig into details that matter for investment decisions
+- Ask thoughtful, probing questions based on the EIR's responses
+- Be encouraging but thorough in your evaluation
+- Focus on corporate venture criteria, not traditional VC metrics
+- When you have sufficient information (typically 8-12 exchanges), conclude with: "Thank you for this comprehensive discussion. I now have enough information to prepare a detailed investment evaluation memo for the Fidelity Labs leadership team. Let me generate that for you."
+- Keep responses conversational and limit to 2-3 questions at a time
 
 Current conversation:
 ${conversationHistory}
 
-Entrepreneur: ${currentInput}
+Entrepreneur in Residence: ${currentInput}
 
-Respond as VC Sarah with your next question or comment. If you believe you have enough information for an investment evaluation, indicate that you're ready to prepare the memo.`;
+Respond as Fidelity Labs VC partner Sarah:`;
 
 			const response = await fetch('/api/flash', {
 				method: 'POST',
@@ -173,9 +190,9 @@ Respond as VC Sarah with your next question or comment. If you believe you have 
 			}];
 
 			// Check if VC is ready to generate memo
-			if (vcResponse.toLowerCase().includes('comprehensive investment memo') || 
+			if (vcResponse.toLowerCase().includes('investment evaluation memo for the fidelity labs leadership team') || 
 				vcResponse.toLowerCase().includes('generate that for you') ||
-				vcResponse.toLowerCase().includes('prepare a comprehensive investment memo')) {
+				vcResponse.toLowerCase().includes('prepare a detailed investment evaluation memo')) {
 				isComplete = true;
 				setTimeout(() => {
 					generateStartupMemo();
@@ -199,31 +216,36 @@ Respond as VC Sarah with your next question or comment. If you believe you have 
 		try {
 			// Bundle the conversation for the memo generation
 			const conversationContext = messages
-				.map((msg, index) => `${msg.type === 'vc' ? 'VC Sarah' : 'Entrepreneur'}: ${msg.content}`)
+				.map((msg, index) => `${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`)
 				.join('\n\n');
 
-			const prompt = `Based on the following comprehensive VC evaluation conversation with an entrepreneur, generate a detailed 2-page professional startup investment memo that follows standard VC memo format.
+			const prompt = `Based on the following comprehensive evaluation conversation between a Fidelity Labs VC partner and an Entrepreneur in Residence (EIR), generate a detailed professional corporate venture investment memo for the Fidelity Labs leadership team.
 
-The memo should be thorough, analytical, and include:
+CONTEXT: This is a proposed wholly owned Fidelity venture being evaluated within the Fidelity Labs corporate incubator program. The EIR is proposing to build this as an internal startup.
 
-1. **Executive Summary** - Clear overview and recommendation
-2. **Problem & Opportunity** - Market problem and size
-3. **Solution & Product** - Product description and differentiation  
-4. **Market Analysis** - TAM, competition, positioning
-5. **Business Model** - Revenue streams, pricing, unit economics
-6. **Go-to-Market Strategy** - Customer acquisition and sales channels
-7. **Team Assessment** - Founder/team evaluation
-8. **Traction & Metrics** - Current progress and KPIs
-9. **Financial Projections** - Revenue forecasts and funding needs
-10. **Risk Assessment** - Key risks and mitigation strategies
-11. **Investment Recommendation** - Clear investment thesis and recommendation
+The memo should be thorough, analytical, and tailored for corporate venture evaluation with sections:
 
-Use professional VC language, include specific data points mentioned in the conversation, and provide actionable insights. Format with clear markdown headers and bullet points.
+1. **Executive Summary** - Clear overview, strategic rationale, and recommendation
+2. **Problem & Market Opportunity** - Market problem, size, and strategic importance to Fidelity
+3. **Solution & Product** - Product description, differentiation, and feasibility
+4. **Fidelity Strategic Alignment** - How this fits Fidelity's business strategy and brand
+5. **Fidelity Asset Leverage** - Specific Fidelity assets that provide competitive advantage
+6. **Market Analysis** - TAM, competition, and our defensible positioning
+7. **Business Model** - Revenue streams, pricing strategy, unit economics potential
+8. **Go-to-Market Strategy** - Customer acquisition leveraging Fidelity channels/relationships
+9. **EIR & Team Assessment** - Founder background and execution capabilities
+10. **Internal Dependencies** - Required Fidelity resources, partnerships, approvals
+11. **Financial Projections** - Revenue potential and investment requirements
+12. **Risk Assessment** - Key risks and mitigation strategies
+13. **Implementation Roadmap** - Key milestones and timeline
+14. **Investment Recommendation** - Clear recommendation with strategic rationale
 
-Conversation:
+Use professional corporate venture language, emphasize strategic fit with Fidelity, include specific data points from the conversation, and provide actionable next steps. Format with clear markdown headers and bullet points.
+
+Conversation between Fidelity Labs VC Partner Sarah and EIR:
 ${conversationContext}
 
-Generate a comprehensive investment memo:`;
+Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 
 			const response = await fetch('/api/grounding', {
 				method: 'POST',
@@ -249,7 +271,7 @@ Generate a comprehensive investment memo:`;
 				title: extractTitleFromMemo(generatedMemo)
 			};
 			
-			localStorage.setItem(`vc-session-${Date.now()}`, JSON.stringify(memoData));
+			localStorage.setItem(`fidelity-labs-session-${Date.now()}`, JSON.stringify(memoData));
 			
 			// Reload historical memos
 			loadHistoricalMemos();
@@ -329,12 +351,12 @@ Generate a comprehensive investment memo:`;
 			<div class="w-80 flex-shrink-0">
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm h-full">
 					<div class="p-4 border-b border-gray-200">
-						<h2 class="text-lg font-semibold text-gray-900">Historical Memos</h2>
+						<h2 class="text-lg font-semibold text-gray-900">Previous Evaluations</h2>
 					</div>
 					<div class="overflow-y-auto" style="height: calc(100% - 4rem);">
 						{#if historicalMemos.length === 0}
 							<div class="p-4 text-gray-500 text-sm">
-								No previous sessions yet. Complete a session to see your memos here.
+								No previous evaluations yet. Complete a venture assessment to see your memos here.
 							</div>
 						{:else}
 							{#each historicalMemos as memo}
@@ -363,8 +385,8 @@ Generate a comprehensive investment memo:`;
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
 					<div class="bg-green-600 px-6 py-4 flex items-center justify-between">
 						<div>
-							<h2 class="text-xl font-bold text-white">Investment Evaluation Memo</h2>
-							<p class="text-green-100 mt-1">Professional VC analysis and recommendation</p>
+							<h2 class="text-xl font-bold text-white">Fidelity Labs Investment Evaluation</h2>
+							<p class="text-green-100 mt-1">Corporate venture assessment and recommendation</p>
 						</div>
 						<div class="flex items-center space-x-3">
 							<Button onclick={startNewSession} variant="secondary" size="sm">
@@ -396,13 +418,13 @@ Generate a comprehensive investment memo:`;
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to VC Validation</h3>
+						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to Fidelity Labs</h3>
 						<p class="text-gray-600 max-w-md mx-auto">
-							Start a new validation session with our AI VC partner Sarah, or browse your previous evaluations from the sidebar.
+							Start a new venture evaluation session with Fidelity Labs VC partner Sarah, or browse your previous assessments from the sidebar.
 						</p>
 					</div>
 					<Button onclick={startNewSession}>
-						{#snippet children()}Start New Validation Session{/snippet}
+						{#snippet children()}Start New Venture Evaluation{/snippet}
 					</Button>
 				</div>
 			{:else}
@@ -411,8 +433,8 @@ Generate a comprehensive investment memo:`;
 					<div class="bg-green-600 px-6 py-4 flex-shrink-0">
 						<div class="flex items-center justify-between">
 							<div class="flex-1">
-								<h2 class="text-xl font-bold text-white">VC Partner Sarah</h2>
-								<p class="text-green-100 mt-1">Dynamic startup evaluation conversation</p>
+								<h2 class="text-xl font-bold text-white">Fidelity Labs VC Partner Sarah</h2>
+								<p class="text-green-100 mt-1">Corporate venture evaluation session</p>
 							</div>
 							<button 
 								onclick={() => showSidebar = !showSidebar}
@@ -437,7 +459,7 @@ Generate a comprehensive investment memo:`;
 									? 'bg-green-600 text-white' 
 									: 'bg-gray-100 text-gray-900'} rounded-lg px-4 py-3">
 									<div class="text-sm font-medium mb-1">
-										{message.type === 'user' ? 'You' : 'VC Sarah'}
+										{message.type === 'user' ? 'EIR' : 'Fidelity Labs VC Sarah'}
 									</div>
 									<div class="whitespace-pre-wrap text-sm">{message.content}</div>
 								</div>
@@ -447,7 +469,7 @@ Generate a comprehensive investment memo:`;
 						{#if isGeneratingResponse}
 							<div class="flex justify-start">
 								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">VC Sarah</div>
+									<div class="text-sm font-medium mb-1">Fidelity Labs VC Sarah</div>
 									<div class="flex items-center space-x-2">
 										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
 										<span class="text-sm">Thinking...</span>
@@ -459,7 +481,7 @@ Generate a comprehensive investment memo:`;
 						{#if isGeneratingMemo}
 							<div class="flex justify-start">
 								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">VC Sarah</div>
+									<div class="text-sm font-medium mb-1">Fidelity Labs VC Sarah</div>
 									<div class="flex items-center space-x-2">
 										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
 										<span class="text-sm">Generating your investment memo...</span>
@@ -476,7 +498,7 @@ Generate a comprehensive investment memo:`;
 								<textarea
 									bind:value={userInput}
 									onkeydown={handleKeydown}
-									placeholder="Share details about your startup idea..."
+									placeholder="Describe your venture concept and how it leverages Fidelity's assets..."
 									class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
 									rows="3"
 									disabled={isGeneratingResponse}
