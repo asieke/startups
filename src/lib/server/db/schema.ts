@@ -46,6 +46,7 @@ export type Summary = {
 	name: string;
 	description: string;
 	tags: string;
+	industry: string;
 	target_customer: string;
 	competitors: {
 		name: string;
