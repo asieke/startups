@@ -407,7 +407,7 @@ Please format this as a professional startup evaluation memo that a VC would pre
 								<p class="text-green-100 mt-1">Professional investment analysis</p>
 							</div>
 							<div class="p-8">
-								<div class="prose prose-lg max-w-none">
+								<div class="prose max-w-none">
 									{@html renderMarkdown(generatedMemo)}
 								</div>
 							</div>
@@ -487,38 +487,60 @@ Please format this as a professional startup evaluation memo that a VC would pre
 <style>
 	/* Custom prose styles for better memo formatting */
 	:global(.prose h1) {
-		@apply text-3xl font-bold text-gray-900 mb-6 pb-2 border-b-2 border-gray-200;
+		font-size: 1.875rem;
+		font-weight: bold;
+		color: #111827;
+		margin-bottom: 1.5rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid #e5e7eb;
 	}
 	
 	:global(.prose h2) {
-		@apply text-2xl font-semibold text-gray-800 mt-8 mb-4;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
+		margin-top: 2rem;
+		margin-bottom: 1rem;
 	}
 	
 	:global(.prose h3) {
-		@apply text-xl font-semibold text-gray-700 mt-6 mb-3;
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: #374151;
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
 	}
 	
 	:global(.prose p) {
-		@apply text-gray-700 leading-relaxed mb-4;
+		color: #374151;
+		line-height: 1.625;
+		margin-bottom: 1rem;
 	}
 	
 	:global(.prose ul) {
-		@apply space-y-2 mb-4;
+		margin-bottom: 1rem;
 	}
 	
 	:global(.prose li) {
-		@apply text-gray-700;
+		color: #374151;
+		margin-bottom: 0.5rem;
 	}
 	
 	:global(.prose strong) {
-		@apply font-semibold text-gray-900;
+		font-weight: 600;
+		color: #111827;
 	}
 	
 	:global(.prose em) {
-		@apply italic text-gray-800;
+		font-style: italic;
+		color: #1f2937;
 	}
 	
 	:global(.prose blockquote) {
-		@apply border-l-4 border-indigo-500 pl-4 italic text-gray-600 my-4;
+		border-left: 4px solid #6366f1;
+		padding-left: 1rem;
+		font-style: italic;
+		color: #4b5563;
+		margin: 1rem 0;
 	}
 </style>
