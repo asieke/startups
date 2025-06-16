@@ -596,6 +596,9 @@ Write in a professional, analytical tone. Include specific data points, company 
 								{#snippet children()}Research{/snippet}
 							</Button>
 						</div>
+						{#if researchInput.trim() === ''}
+							<p class="text-xs text-gray-500 mt-2 text-center">Enter a research topic to enable the Research button</p>
+						{/if}
 					</div>
 				</div>
 			{:else}
@@ -627,6 +630,9 @@ Write in a professional, analytical tone. Include specific data points, company 
 								{#snippet children()}Research{/snippet}
 							</Button>
 						</div>
+						{#if researchInput.trim() === ''}
+							<p class="text-xs text-gray-500 mt-2 text-center">Enter a research topic to enable the Research button</p>
+						{/if}
 					</div>
 				</div>
 			{/if}
