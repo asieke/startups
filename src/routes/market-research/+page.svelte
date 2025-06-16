@@ -80,6 +80,24 @@
 		currentStep = 'complete';
 	}
 
+	function deleteReport(reportId: string, event: Event) {
+		event.stopPropagation(); // Prevent selecting the report when clicking delete
+		
+		if (confirm('Are you sure you want to delete this research report? This action cannot be undone.')) {
+			// Remove from localStorage
+			localStorage.removeItem(reportId);
+			
+			// If this was the selected report, clear the selection
+			if (selectedReport?.id === reportId) {
+				selectedReport = null;
+				startNewResearch();
+			}
+			
+			// Reload the historical reports list
+			loadHistoricalReports();
+		}
+	}
+
 	async function conductResearch() {
 		if (!researchInput.trim() || isResearching) return;
 
@@ -108,7 +126,7 @@
 			currentStep = 'complete';
 		} catch (error) {
 			console.error('Research failed:', error);
-			finalReport = `**Research Failed**\n\nThere was an error conducting the research: ${error.message}`;
+			finalReport = `**Research Failed**\n\nThere was an error conducting the research: ${(error as Error).message}`;
 			currentStep = 'complete';
 		} finally {
 			isResearching = false;
@@ -154,9 +172,9 @@ Return as a numbered list with brief descriptions for each subtopic.`;
 		// Parse subtopics from the response
 		const subtopicLines = result.text
 			.split('\n')
-			.filter(line => line.trim().match(/^\d+\./))
-			.map(line => line.replace(/^\d+\.\s*/, '').trim())
-			.filter(topic => topic.length > 0);
+			.filter((line: string) => line.trim().match(/^\d+\./))
+			.map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
+			.filter((topic: string) => topic.length > 0);
 
 		subtopics = subtopicLines;
 		progress = 20;
@@ -379,17 +397,30 @@ Write in a professional, analytical tone. Include specific data points, company 
 							</div>
 						{:else}
 							{#each historicalReports as report}
-								<button
-									onclick={() => selectReport(report)}
-									class="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedReport?.id === report.id ? 'bg-blue-50 border-blue-200' : ''}"
-								>
-									<div class="font-medium text-gray-900 text-sm truncate">
-										{report.title || report.topic}
+								<div class="border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedReport?.id === report.id ? 'bg-blue-50 border-blue-200' : ''}">
+									<div class="flex items-center">
+										<button
+											onclick={() => selectReport(report)}
+											class="flex-1 p-4 text-left"
+										>
+											<div class="font-medium text-gray-900 text-sm truncate">
+												{report.title || report.topic}
+											</div>
+											<div class="text-xs text-gray-500 mt-1">
+												{formatDate(report.timestamp)}
+											</div>
+										</button>
+										<button
+											onclick={(event) => deleteReport(report.id, event)}
+											class="p-2 m-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+											title="Delete report"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+											</svg>
+										</button>
 									</div>
-									<div class="text-xs text-gray-500 mt-1">
-										{formatDate(report.timestamp)}
-									</div>
-								</button>
+								</div>
 							{/each}
 						{/if}
 					</div>
