@@ -121,7 +121,21 @@
 
 		const prompt = `You are a research strategist. A user wants to research the following topic: "${topic}".
 
-Break this into 5–8 distinct subtopics that are important to cover in a competitive market analysis. Include things like market size, trends, competitors, regulation, monetization, and risks. Return as a numbered list.`;
+Break this into 8–12 distinct subtopics that are important to cover in a comprehensive competitive market analysis. Include detailed areas like:
+- Market size and growth projections
+- Current market trends and dynamics
+- Key competitors and market leaders
+- Emerging players and disruptors
+- Business models and monetization strategies
+- Regulatory landscape and compliance requirements
+- Technology infrastructure and technical challenges
+- User adoption and demographics
+- Investment landscape and funding trends
+- Key risks and market barriers
+- Future opportunities and growth catalysts
+- Geographic market variations
+
+Return as a numbered list with brief descriptions for each subtopic.`;
 
 		const response = await fetch('/api/pro', {
 			method: 'POST',
@@ -166,18 +180,32 @@ Break this into 5–8 distinct subtopics that are important to cover in a compet
 	}
 
 	async function searchTopic(topic: string, subtopic: string): Promise<string> {
-		const prompt = `You are an expert researcher. Provide a detailed, up-to-date overview of the following aspect of ${topic}:
+		const prompt = `You are an expert market researcher conducting comprehensive analysis. SEARCH GOOGLE extensively for current, factual information about the following aspect of ${topic}:
 
 "${subtopic}"
 
-Focus on real-world data, relevant examples, and recent developments. Use a concise, analytical tone. Where appropriate, cite sources or platforms, but do not fabricate any data. This content will be used in a formal research report.`;
+INSTRUCTIONS:
+- SEARCH GOOGLE thoroughly for the most recent data, reports, news, and developments
+- Verify all statistics, company information, and market data through multiple sources
+- Include specific numbers, dates, company names, and quantitative data where available
+- Reference recent industry reports, news articles, and authoritative sources
+- Focus on factual, verifiable information rather than speculation
+- Include market sizing data, growth rates, key players, and recent developments
+- Provide a detailed, analytical overview with concrete examples and data points
+
+This research will be used in a formal market analysis report, so accuracy and depth are critical. Make sure to search for and include the most current information available.
+
+Write your findings in a comprehensive, analytical tone with specific details and data points. Structure your response with clear subheadings and bullet points where appropriate.`;
 
 		const response = await fetch('/api/grounding', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ prompt })
+			body: JSON.stringify({ 
+				prompt,
+				model: 'gemini-2.5-pro-preview-06-05'
+			})
 		});
 
 		const result = await response.json();
@@ -190,37 +218,70 @@ Focus on real-world data, relevant examples, and recent developments. Use a conc
 	}
 
 	async function assembleReport(topic: string, sections: Record<string, string>): Promise<void> {
-		currentSubtopic = 'Synthesizing final report...';
+		currentSubtopic = 'Synthesizing comprehensive final report...';
 		progress = 85;
 
 		const sectionsText = Object.entries(sections)
-			.map(([subtopic, content]) => `## ${subtopic}\n\n${content}`)
-			.join('\n\n');
+			.map(([subtopic, content]) => `### ${subtopic}\n\n${content}`)
+			.join('\n\n---\n\n');
 
-		const prompt = `You are a research analyst. You've received the following findings from multiple topic-specific searches about "${topic}".
+		const prompt = `You are a senior research analyst creating a comprehensive market research report. Based on the detailed findings below about "${topic}", write a professional, in-depth market analysis report.
 
-Write a well-organized research report with the following sections:
-1. Executive Summary
-2. Market Overview
-3. Key Players and Competitive Landscape
-4. Business Models
-5. Regulatory Landscape
-6. Key Risks and Challenges
-7. Emerging Trends and Future Outlook
+**IMPORTANT: Output the report in clean MARKDOWN format with proper headers, bullet points, and formatting.**
 
-Use the source material below for each section:
+Structure your report with these sections:
+# Market Research Report: ${topic}
+
+## Executive Summary
+Provide a 3-4 paragraph executive summary covering key findings, market size, major trends, and strategic recommendations.
+
+## Market Overview & Size
+Include specific market sizing data, growth rates, and market dynamics. Reference concrete numbers and sources where available.
+
+## Competitive Landscape
+Detailed analysis of key players, market leaders, emerging companies, market share data, and competitive positioning.
+
+## Business Models & Revenue Streams
+Comprehensive analysis of how companies monetize, pricing strategies, unit economics, and financial performance where available.
+
+## Technology & Infrastructure
+Technical requirements, infrastructure challenges, technological trends, and innovation drivers.
+
+## Regulatory Environment
+Current regulations, compliance requirements, regulatory trends, and jurisdiction-specific considerations.
+
+## Market Trends & Drivers
+Key trends driving growth, adoption patterns, user behavior, and market dynamics.
+
+## Investment & Funding Landscape
+Venture capital activity, funding rounds, valuation trends, and investor sentiment.
+
+## Challenges & Risk Factors
+Major risks, barriers to entry, market challenges, and potential threats.
+
+## Geographic Analysis
+Regional market variations, international expansion opportunities, and geographic trends.
+
+## Future Outlook & Opportunities
+Growth projections, emerging opportunities, potential market evolution, and strategic recommendations.
+
+## Key Takeaways
+Bullet-pointed summary of the most important insights and recommendations.
+
+**Source Material:**
 ${sectionsText}
 
-Write in a professional tone. Keep each section tight and analytical. Do not fabricate or speculate — stick to the grounded findings. No source citations needed, just synthesize.
+Write in a professional, analytical tone. Include specific data points, company names, numbers, and concrete examples throughout. Use proper markdown formatting with headers, bullet points, and emphasis where appropriate. Be comprehensive and detailed while maintaining clarity and readability.`;
 
-Keep it as brief and analytical as possible, no extraneous words.`;
-
-		const response = await fetch('/api/pro', {
+		const response = await fetch('/api/grounding', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ prompt })
+			body: JSON.stringify({ 
+				prompt,
+				model: 'gemini-2.5-pro-preview-06-05'
+			})
 		});
 
 		const result = await response.json();
