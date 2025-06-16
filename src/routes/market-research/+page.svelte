@@ -248,7 +248,7 @@ Write your findings in a comprehensive, analytical tone with specific details an
 **IMPORTANT: Output the report in clean MARKDOWN format with proper headers, bullet points, and formatting.**
 
 Structure your report with these sections:
-# Market Research Report: ${topic}
+# ${topic}
 
 ## Executive Summary
 Provide a 3-4 paragraph executive summary covering key findings, market size, major trends, and strategic recommendations.
@@ -422,7 +422,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
 					<div class="bg-blue-600 px-6 py-4 flex items-center justify-between">
 						<div>
-							<h2 class="text-xl font-bold text-white">Market Research Report</h2>
+							<h2 class="text-xl font-bold text-white">{selectedReport ? (selectedReport.title || selectedReport.topic) : 'Research Report'}</h2>
 						</div>
 						<div class="flex items-center space-x-3">
 							{#if selectedReport}
@@ -460,7 +460,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 				<!-- Research Progress -->
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
 					<div class="bg-blue-600 px-6 py-4">
-						<h2 class="text-xl font-bold text-white">Conducting Market Research</h2>
+						<h2 class="text-xl font-bold text-white">Conducting Research</h2>
 						<p class="text-blue-100 mt-1">Researching: {currentTopic}</p>
 					</div>
 					<div class="flex-1 flex flex-col justify-center items-center p-8">
@@ -574,9 +574,9 @@ Write in a professional, analytical tone. Include specific data points, company 
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Market Research Intelligence</h3>
+						<h3 class="text-xl font-semibold text-gray-900 mb-2">Research Intelligence</h3>
 						<p class="text-gray-600 max-w-md mx-auto mb-6">
-							Get comprehensive market research reports on any topic. Our AI researches market trends, competitors, and industry insights in real-time.
+							Get comprehensive research reports on any topic. Our AI researches market trends, competitors, and industry insights in real-time.
 						</p>
 					</div>
 					
@@ -605,9 +605,9 @@ Write in a professional, analytical tone. Include specific data points, company 
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Market Research Intelligence</h3>
+						<h3 class="text-xl font-semibold text-gray-900 mb-2">Research Intelligence</h3>
 						<p class="text-gray-600 max-w-md mx-auto mb-6">
-							Start a new market research project or browse your previous reports from the sidebar.
+							Start a new research project or browse your previous reports from the sidebar.
 						</p>
 					</div>
 					
