@@ -332,10 +332,20 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 
 	// Auto scroll to bottom when new messages arrive
 	let messagesContainer: HTMLDivElement;
+	let textareaElement: HTMLTextAreaElement;
 	$effect(() => {
 		if (messagesContainer && messages.length > 0) {
 			setTimeout(() => {
 				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}, 100);
+		}
+	});
+
+	// Auto-focus textarea after response generation
+	$effect(() => {
+		if (!isGeneratingResponse && !isGeneratingMemo && textareaElement) {
+			setTimeout(() => {
+				textareaElement.focus();
 			}, 100);
 		}
 	});
@@ -621,9 +631,9 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 									bind:value={userInput}
 									onkeydown={handleKeydown}
 									placeholder="Describe your venture concept and how it leverages Fidelity's assets..."
-									class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-									rows="3"
+									class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none h-20"
 									disabled={isGeneratingResponse}
+									bind:this={textareaElement}
 								></textarea>
 								<div class="flex flex-col space-y-2">
 									<Button onclick={sendMessage} disabled={!userInput.trim() || isGeneratingResponse}>
