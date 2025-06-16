@@ -2,12 +2,13 @@
 	<!-- Hero Section -->
 	<div class="mb-16 text-center">
 		<p class="mx-auto mb-8 max-w-3xl text-xl text-gray-600">
-			Search for similar startup ideas, browse through our comprehensive database, or validate your idea with our AI VC partner.
+			Search for similar startup ideas, browse through our comprehensive database, validate your
+			idea with our AI VC partner, or dive deep into market research.
 		</p>
 	</div>
 
 	<!-- Action Cards -->
-	<div class="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
+	<div class="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
 		<!-- Search Card -->
 		<a
 			href="/search"
@@ -111,10 +112,51 @@
 				VC Validator
 			</h3>
 			<p class="mb-6 text-gray-600">
-				Get your startup idea validated by our AI VC partner. Engage in a dynamic conversation to evaluate market potential, business model, and investment readiness.
+				Get your startup idea validated by our AI VC partner. Engage in a dynamic conversation to
+				evaluate market potential, business model, and investment readiness.
 			</p>
 			<div class="flex items-center font-semibold text-green-600 group-hover:text-green-700">
 				Start Validation
+				<svg
+					class="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+					></path>
+				</svg>
+			</div>
+		</a>
+
+		<!-- Market Research Card -->
+		<a
+			href="/market-research"
+			class="group block rounded-2xl border border-gray-200 bg-white p-8 shadow-lg transition-all duration-300 hover:border-purple-300 hover:shadow-xl"
+		>
+			<div
+				class="mb-6 flex h-16 w-16 items-center justify-center rounded-xl bg-purple-100 transition-colors group-hover:bg-purple-200"
+			>
+				<svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+					></path>
+				</svg>
+			</div>
+			<h3
+				class="mb-4 text-2xl font-bold text-gray-900 transition-colors group-hover:text-purple-600"
+			>
+				Market Research
+			</h3>
+			<p class="mb-6 text-gray-600">
+				Analyze market trends, competitor insights, and industry data. Get comprehensive market
+				research to understand your target market and opportunities.
+			</p>
+			<div class="flex items-center font-semibold text-purple-600 group-hover:text-purple-700">
+				Explore Markets
 				<svg
 					class="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1"
 					fill="none"

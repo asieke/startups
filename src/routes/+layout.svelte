@@ -7,12 +7,15 @@
 
 <div class="min-h-screen bg-gray-50">
 	<!-- Fixed Top Navigation -->
-	<nav class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-200">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<div class="flex justify-between items-center h-16">
+	<nav class="fixed top-0 right-0 left-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div class="flex h-16 items-center justify-between">
 				<!-- Logo/Brand -->
 				<div class="flex items-center">
-					<a href="/" class="text-2xl font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+					<a
+						href="/"
+						class="text-2xl font-bold text-indigo-600 transition-colors hover:text-indigo-700"
+					>
 						StartupHub
 					</a>
 				</div>
@@ -21,27 +24,48 @@
 				<div class="flex items-center space-x-8">
 					<a
 						href="/"
-						class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 {$page.url.pathname === '/' ? 'text-indigo-600 bg-indigo-50' : ''}"
+						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-indigo-600 {$page
+							.url.pathname === '/'
+							? 'bg-indigo-50 text-indigo-600'
+							: ''}"
 					>
 						Home
 					</a>
 					<a
 						href="/search"
-						class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 {$page.url.pathname === '/search' ? 'text-indigo-600 bg-indigo-50' : ''}"
+						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-indigo-600 {$page
+							.url.pathname === '/search'
+							? 'bg-indigo-50 text-indigo-600'
+							: ''}"
 					>
 						Search Ideas
 					</a>
 					<a
 						href="/startups"
-						class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 {$page.url.pathname === '/startups' ? 'text-indigo-600 bg-indigo-50' : ''}"
+						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-indigo-600 {$page
+							.url.pathname === '/startups'
+							? 'bg-indigo-50 text-indigo-600'
+							: ''}"
 					>
 						Browse Startups
 					</a>
 					<a
 						href="/validation"
-						class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 {$page.url.pathname === '/validation' ? 'text-indigo-600 bg-indigo-50' : ''}"
+						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-indigo-600 {$page
+							.url.pathname === '/validation'
+							? 'bg-indigo-50 text-indigo-600'
+							: ''}"
 					>
 						VC Validation
+					</a>
+					<a
+						href="/market-research"
+						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-indigo-600 {$page
+							.url.pathname === '/market-research'
+							? 'bg-indigo-50 text-indigo-600'
+							: ''}"
+					>
+						Market Research
 					</a>
 				</div>
 			</div>
