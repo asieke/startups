@@ -15,39 +15,17 @@
 		conversation: Message[];
 		memo: string;
 		title: string;
+		researchTopics?: string[];
 	}
 
-	// VC Questions - exactly 20 as specified
-	const VC_QUESTIONS = [
-		"What is the problem you are solving?",
-		"Who is the target customer?",
-		"Why is this problem urgent or important for them?",
-		"How are they solving it today?",
-		"What makes your solution better or different?",
-		"What is your product or service concept?",
-		"Will customers pay to solve this problem?",
-		"How much do you think they would pay?",
-		"How many customers exist (TAM)?",
-		"Is this a one-time, subscription, or usage-based model?",
-		"What is your estimated customer acquisition cost (CAC)?",
-		"What channels would you use to acquire customers?",
-		"Who are the main competitors or alternatives?",
-		"What's your moat or defensibility?",
-		"Why is now the right time to build this?",
-		"What is the fastest way to test or prototype this?",
-		"What Fidelity assets give us an advantage (data, brand, relationships, etc.)?",
-		"Are there internal dependencies or blockers inside Fidelity?",
-		"Does this align with Fidelity's strategy and brand?",
-		"Could this realistically be a $100M+ business?"
-	];
-
 	// Chat state
-	let currentQuestionIndex = $state(0);
 	let messages = $state<Message[]>([]);
 	let userInput = $state('');
 	let isComplete = $state(false);
 	let isGeneratingMemo = $state(false);
+	let isGeneratingResponse = $state(false);
 	let generatedMemo = $state('');
+	let researchTopics = $state<string[]>([]);
 	
 	// Historical memos state
 	let historicalMemos = $state<MemoData[]>([]);
@@ -57,12 +35,12 @@
 	// Determine if we're in active chat mode
 	let isActiveChatMode = $derived(!isComplete && !selectedMemo && messages.length > 0);
 
-	// Initialize with first question
+	// Initialize with first message
 	$effect(() => {
 		if (messages.length === 0 && !selectedMemo) {
 			messages = [{
 				type: 'vc',
-				content: `Hello! I'm a VC partner and I'd like to understand your startup idea. I have 20 questions that will help us both evaluate the potential of your business. Let's start:\n\n${VC_QUESTIONS[0]}`
+				content: `Sarah, Fidelity Labs VC. What problem are you solving and how?`
 			}];
 		}
 	});
@@ -76,7 +54,7 @@
 		const memos: MemoData[] = [];
 		for (let i = 0; i < localStorage.length; i++) {
 			const key = localStorage.key(i);
-			if (key?.startsWith('vc-session-')) {
+			if (key?.startsWith('fidelity-labs-session-')) {
 				try {
 					const data = JSON.parse(localStorage.getItem(key) || '');
 					memos.push({
@@ -94,15 +72,16 @@
 
 	function startNewSession() {
 		selectedMemo = null;
-		currentQuestionIndex = 0;
 		messages = [{
 			type: 'vc',
-			content: `Hello! I'm a VC partner and I'd like to understand your startup idea. I have 20 questions that will help us both evaluate the potential of your business. Let's start:\n\n${VC_QUESTIONS[0]}`
+			content: `Sarah, Fidelity Labs VC. What problem are you solving and how?`
 		}];
 		userInput = '';
 		isComplete = false;
 		isGeneratingMemo = false;
+		isGeneratingResponse = false;
 		generatedMemo = '';
+		researchTopics = [];
 	}
 
 	function selectMemo(memo: MemoData) {
@@ -111,90 +90,129 @@
 		isComplete = true;
 		generatedMemo = memo.memo;
 		messages = memo.conversation || [];
+		researchTopics = memo.researchTopics || [];
 	}
 
-	function sendMessage() {
-		if (!userInput.trim()) return;
+	async function sendMessage() {
+		if (!userInput.trim() || isGeneratingResponse) return;
 
 		// Add user message
-		messages = [...messages, {
-			type: 'user',
+		const newUserMessage = {
+			type: 'user' as const,
 			content: userInput.trim()
-		}];
-
-		// Move to next question or finish
-		currentQuestionIndex++;
+		};
+		messages = [...messages, newUserMessage];
 		
-		if (currentQuestionIndex < VC_QUESTIONS.length) {
-			// Add next VC question
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: VC_QUESTIONS[currentQuestionIndex]
-				}];
-			}, 500);
-		} else {
-			// All questions done
-			isComplete = true;
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: "Excellent! That completes our evaluation session. I'm now generating a comprehensive startup memo based on our conversation..."
-				}];
-				generateStartupMemo();
-			}, 500);
-		}
-
+		const currentInput = userInput;
 		userInput = '';
-	}
+		isGeneratingResponse = true;
 
-	function handleDontKnow() {
-		messages = [...messages, {
-			type: 'user',
-			content: "I don't know"
-		}];
+		try {
+			// Generate AI response using the conversation context
+			const conversationHistory = messages.map(msg => 
+				`${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`
+			).join('\n\n');
 
-		currentQuestionIndex++;
-		
-		if (currentQuestionIndex < VC_QUESTIONS.length) {
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: `That's okay. Let's move on to the next question:\n\n${VC_QUESTIONS[currentQuestionIndex]}`
-				}];
-			}, 500);
-		} else {
-			isComplete = true;
-			setTimeout(() => {
-				messages = [...messages, {
-					type: 'vc',
-					content: "That completes our evaluation session. I'm now generating a comprehensive startup memo based on our conversation..."
-				}];
-				generateStartupMemo();
-			}, 500);
-		}
-	}
+			const systemPrompt = `You are Sarah, a VC partner at Fidelity Labs, the corporate innovation incubator at Fidelity Investments. You are conducting a startup evaluation session with an Entrepreneur in Residence (EIR) who is proposing a new venture to be developed as a wholly owned Fidelity startup.
 
-	function handleHelpWithResearch() {
-		messages = [...messages, {
-			type: 'user',
-			content: "Help with Research"
-		}];
+CONTEXT:
+- The entrepreneur is a Fidelity EIR, not an external founder
+- Any venture will be wholly owned by Fidelity, not an external investment
+- You need to evaluate strategic fit with Fidelity's business and brand
+- Consider how Fidelity's assets (data, customer base, brand, relationships, technology) can provide competitive advantage
 
-		setTimeout(() => {
+EVALUATION AREAS TO COVER:
+1. Problem/Solution: What customer problem does this solve? How does the solution work?
+2. Market Opportunity: Size, growth, and strategic importance to Fidelity
+3. Fidelity Strategic Alignment: How does this fit Fidelity's priorities and brand?
+4. Fidelity Asset Leverage: What unique Fidelity assets give this venture an advantage?
+5. Business Model: Revenue potential, pricing, unit economics
+6. Competition: Competitive landscape and our defensible position
+7. Go-to-Market: Customer acquisition strategy, distribution channels
+8. Team & Execution: EIR background and execution plan
+9. Internal Dependencies: What Fidelity resources, partnerships, or approvals are needed?
+10. Scalability: Can this realistically become a $100M+ business for Fidelity?
+
+CRITICAL COMMUNICATION STYLE:
+- Be EXTREMELY brief and terse - you are a "high bandwidth communicator"
+- Use MAX 2 sentences per response, ideally just 1 sentence
+- Ask direct, pointed questions
+- No fluff, no pleasantries after the first exchange
+- Get straight to the point
+
+INSTRUCTIONS:
+- Ask one sharp, focused question based on the EIR's response
+- Move systematically through evaluation areas
+- When you have sufficient information (typically 8-12 exchanges), conclude with: "I have enough for the memo."
+- If the EIR says "Research Later" about a topic, acknowledge briefly and move to the next area
+
+Current conversation:
+${conversationHistory}
+
+Entrepreneur in Residence: ${currentInput}
+
+Respond as Fidelity Labs VC partner Sarah with ONE crisp sentence:`;
+
+			const response = await fetch('/api/flash', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ 
+					prompt: systemPrompt,
+					schema: {
+						type: 'object',
+						properties: {
+							response: {
+								type: 'string',
+								description: 'VC Sarah\'s response to the entrepreneur'
+							}
+						},
+						required: ['response']
+					}
+				})
+			});
+
+			const result = await response.json();
+			
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
+			// Parse the JSON response and extract the actual text
+			let vcResponse;
+			try {
+				const parsedResponse = JSON.parse(result.text);
+				vcResponse = parsedResponse.response || result.text;
+			} catch (parseError) {
+				// If parsing fails, use the raw text
+				vcResponse = result.text;
+			}
+
+			// Add VC response
 			messages = [...messages, {
 				type: 'vc',
-				content: `I understand you'd like help researching this aspect. For now, let's continue with what you know and we can revisit this during the memo generation. Moving to the next question:\n\n${VC_QUESTIONS[currentQuestionIndex + 1] || "That was our final question."}`
+				content: vcResponse.trim()
 			}];
-		}, 500);
 
-		currentQuestionIndex++;
-		
-		if (currentQuestionIndex >= VC_QUESTIONS.length) {
-			isComplete = true;
-			setTimeout(() => {
-				generateStartupMemo();
-			}, 1000);
+			// Check if VC is ready to generate memo
+			if (vcResponse.toLowerCase().includes('i have enough for the memo') || 
+				vcResponse.toLowerCase().includes('generate that for you') ||
+				vcResponse.toLowerCase().includes('prepare a detailed investment evaluation memo')) {
+				isComplete = true;
+				setTimeout(() => {
+					generateStartupMemo();
+				}, 1000);
+			}
+
+		} catch (error) {
+			console.error('Error generating VC response:', error);
+			messages = [...messages, {
+				type: 'vc',
+				content: "I apologize, there was a technical issue. Could you please repeat your last response?"
+			}];
+		} finally {
+			isGeneratingResponse = false;
 		}
 	}
 
@@ -202,29 +220,48 @@
 		isGeneratingMemo = true;
 		
 		try {
-			// Bundle the conversation for the grounding endpoint
+			// Bundle the conversation for the memo generation
 			const conversationContext = messages
-				.map((msg, index) => `${msg.type === 'vc' ? 'VC' : 'Entrepreneur'}: ${msg.content}`)
+				.map((msg, index) => `${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`)
 				.join('\n\n');
 
-			const prompt = `Based on the following VC evaluation session with an entrepreneur, generate a comprehensive 2-page startup memo that outlines the business described. The memo should be professional, analytical, and follow standard VC memo format with sections for:
+			const prompt = `Based on the following comprehensive evaluation conversation between a Fidelity Labs VC partner and an Entrepreneur in Residence (EIR), generate a detailed professional corporate venture investment memo for the Fidelity Labs leadership team.
 
-1. Executive Summary
-2. Problem & Opportunity
-3. Solution & Product
-4. Market & Competition
-5. Business Model
-6. Go-to-Market Strategy
-7. Team & Execution
-8. Financial Projections
-9. Risks & Mitigation
-10. Investment Recommendation
+CONTEXT: This is a proposed wholly owned Fidelity venture being evaluated within the Fidelity Labs corporate incubator program. The EIR is proposing to build this as an internal startup.
 
-Here is the conversation:
+${researchTopics.length > 0 ? `
+DEFERRED RESEARCH TOPICS:
+The following topics were marked for later Google research during the conversation:
+${researchTopics.map((topic, index) => `${index + 1}. ${topic}`).join('\n')}
+` : ''}
 
+The memo should be thorough, analytical, and tailored for corporate venture evaluation with sections:
+
+1. **Executive Summary** - Clear overview, strategic rationale, and recommendation
+2. **Problem & Market Opportunity** - Market problem, size, and strategic importance to Fidelity
+3. **Solution & Product** - Product description, differentiation, and feasibility
+4. **Fidelity Strategic Alignment** - How this fits Fidelity's business strategy and brand
+5. **Fidelity Asset Leverage** - Specific Fidelity assets that provide competitive advantage
+6. **Market Analysis** - TAM, competition, and our defensible positioning
+7. **Business Model** - Revenue streams, pricing strategy, unit economics potential
+8. **Go-to-Market Strategy** - Customer acquisition leveraging Fidelity channels/relationships
+9. **EIR & Team Assessment** - Founder background and execution capabilities
+10. **Internal Dependencies** - Required Fidelity resources, partnerships, approvals
+11. **Financial Projections** - Revenue potential and investment requirements
+12. **Risk Assessment** - Key risks and mitigation strategies
+13. **Implementation Roadmap** - Key milestones and timeline
+${researchTopics.length > 0 ? '14. **Required Research** - Topics requiring Google research and market analysis\n15. **Investment Recommendation** - Clear recommendation with strategic rationale' : '14. **Investment Recommendation** - Clear recommendation with strategic rationale'}
+
+Use professional corporate venture language, emphasize strategic fit with Fidelity, include specific data points from the conversation, and provide actionable next steps. Format with clear markdown headers and bullet points.
+
+${researchTopics.length > 0 ? `
+In the "Required Research" section, list the deferred research topics and suggest specific Google searches and market research needed to complete the evaluation.
+` : ''}
+
+Conversation between Fidelity Labs VC Partner Sarah and EIR:
 ${conversationContext}
 
-Please format this as a professional startup evaluation memo that a VC would present to their investment committee. Use markdown formatting for headers, lists, and emphasis. Start with a clear title that captures the business concept.`;
+Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 
 			const response = await fetch('/api/grounding', {
 				method: 'POST',
@@ -247,10 +284,11 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				timestamp: new Date().toISOString(),
 				conversation: messages,
 				memo: generatedMemo,
-				title: extractTitleFromMemo(generatedMemo)
+				title: extractTitleFromMemo(generatedMemo),
+				researchTopics: researchTopics
 			};
 			
-			localStorage.setItem(`vc-session-${Date.now()}`, JSON.stringify(memoData));
+			localStorage.setItem(`fidelity-labs-session-${Date.now()}`, JSON.stringify(memoData));
 			
 			// Reload historical memos
 			loadHistoricalMemos();
@@ -294,10 +332,20 @@ Please format this as a professional startup evaluation memo that a VC would pre
 
 	// Auto scroll to bottom when new messages arrive
 	let messagesContainer: HTMLDivElement;
+	let textareaElement: HTMLTextAreaElement;
 	$effect(() => {
-		if (messagesContainer && messages.length > 0 && !isComplete) {
+		if (messagesContainer && messages.length > 0) {
 			setTimeout(() => {
 				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}, 100);
+		}
+	});
+
+	// Auto-focus textarea after response generation
+	$effect(() => {
+		if (!isGeneratingResponse && !isGeneratingMemo && textareaElement) {
+			setTimeout(() => {
+				textareaElement.focus();
 			}, 100);
 		}
 	});
@@ -319,6 +367,104 @@ Please format this as a professional startup evaluation memo that a VC would pre
 			return text;
 		}
 	}
+
+	async function handleResearchLater() {
+		if (!userInput.trim() || isGeneratingResponse) return;
+
+		// Add the current topic to research topics list
+		const currentTopic = `${messages[messages.length - 1]?.content || 'Previous question'} - ${userInput.trim()}`;
+		researchTopics = [...researchTopics, currentTopic];
+
+		// Add user message indicating research needed
+		messages = [...messages, {
+			type: 'user',
+			content: `Research Later: ${userInput.trim()}`
+		}];
+
+		const currentInput = userInput;
+		userInput = '';
+		isGeneratingResponse = true;
+
+		try {
+			// Generate AI response for moving to next topic
+			const conversationHistory = messages.map(msg => 
+				`${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`
+			).join('\n\n');
+
+			const systemPrompt = `You are Sarah, a VC partner at Fidelity Labs. The EIR just said they need to research a topic later. 
+
+CRITICAL COMMUNICATION STYLE:
+- Be EXTREMELY brief and terse - you are a "high bandwidth communicator"
+- Use MAX 1 sentence
+- Acknowledge briefly and move to the next evaluation area
+- No fluff, get straight to the next question
+
+The EIR said "Research Later" about: ${currentInput}
+
+Current conversation:
+${conversationHistory}
+
+Respond with ONE sentence acknowledging and moving to the next topic:`;
+
+			const response = await fetch('/api/flash', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ 
+					prompt: systemPrompt,
+					schema: {
+						type: 'object',
+						properties: {
+							response: {
+								type: 'string',
+								description: 'VC Sarah\'s brief response moving to next topic'
+							}
+						},
+						required: ['response']
+					}
+				})
+			});
+
+			const result = await response.json();
+			
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
+			// Parse the JSON response
+			let vcResponse;
+			try {
+				const parsedResponse = JSON.parse(result.text);
+				vcResponse = parsedResponse.response || result.text;
+			} catch (parseError) {
+				vcResponse = result.text;
+			}
+
+			// Add VC response
+			messages = [...messages, {
+				type: 'vc',
+				content: vcResponse.trim()
+			}];
+
+			// Check if VC is ready to generate memo
+			if (vcResponse.toLowerCase().includes('i have enough for the memo')) {
+				isComplete = true;
+				setTimeout(() => {
+					generateStartupMemo();
+				}, 1000);
+			}
+
+		} catch (error) {
+			console.error('Error generating VC response:', error);
+			messages = [...messages, {
+				type: 'vc',
+				content: "Got it, moving on."
+			}];
+		} finally {
+			isGeneratingResponse = false;
+		}
+	}
 </script>
 
 <!-- Main Container with proper spacing like other pages -->
@@ -330,12 +476,12 @@ Please format this as a professional startup evaluation memo that a VC would pre
 			<div class="w-80 flex-shrink-0">
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm h-full">
 					<div class="p-4 border-b border-gray-200">
-						<h2 class="text-lg font-semibold text-gray-900">Historical Memos</h2>
+						<h2 class="text-lg font-semibold text-gray-900">Previous Evaluations</h2>
 					</div>
 					<div class="overflow-y-auto" style="height: calc(100% - 4rem);">
 						{#if historicalMemos.length === 0}
 							<div class="p-4 text-gray-500 text-sm">
-								No previous sessions yet. Complete a session to see your memos here.
+								No previous evaluations yet. Complete a venture assessment to see your memos here.
 							</div>
 						{:else}
 							{#each historicalMemos as memo}
@@ -364,8 +510,8 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
 					<div class="bg-green-600 px-6 py-4 flex items-center justify-between">
 						<div>
-							<h2 class="text-xl font-bold text-white">Startup Evaluation Memo</h2>
-							<p class="text-green-100 mt-1">Professional investment analysis</p>
+							<h2 class="text-xl font-bold text-white">Fidelity Labs Investment Evaluation</h2>
+							<p class="text-green-100 mt-1">Corporate venture assessment and recommendation</p>
 						</div>
 						<div class="flex items-center space-x-3">
 							<Button onclick={startNewSession} variant="secondary" size="sm">
@@ -392,32 +538,39 @@ Please format this as a professional startup evaluation memo that a VC would pre
 				<!-- Welcome state with historical memos -->
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center h-full flex flex-col justify-center">
 					<div class="mb-6">
-						<div class="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-							<svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+						<div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to VC Validation</h3>
+						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to Fidelity Labs</h3>
 						<p class="text-gray-600 max-w-md mx-auto">
-							Start a new validation session to evaluate your startup idea, or browse your previous evaluations from the sidebar.
+							Start a new venture evaluation session with Fidelity Labs VC partner Sarah, or browse your previous assessments from the sidebar.
 						</p>
 					</div>
 					<Button onclick={startNewSession}>
-						{#snippet children()}Start New Validation Session{/snippet}
+						{#snippet children()}Start New Venture Evaluation{/snippet}
 					</Button>
 				</div>
 			{:else}
 				<!-- Chat Interface -->
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
-					<div class="bg-indigo-600 px-6 py-4 flex-shrink-0">
+					<div class="bg-green-600 px-6 py-4 flex-shrink-0">
 						<div class="flex items-center justify-between">
 							<div class="flex-1">
-								<h2 class="text-xl font-bold text-white">VC Partner Discussion</h2>
-								<p class="text-indigo-100 mt-1">Professional startup evaluation session</p>
+								<h2 class="text-xl font-bold text-white">Fidelity Labs VC Partner Sarah</h2>
+								<div class="flex items-center space-x-4">
+									<p class="text-green-100 mt-1">Corporate venture evaluation session</p>
+									{#if researchTopics.length > 0}
+										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+											{researchTopics.length} research topic{researchTopics.length === 1 ? '' : 's'} deferred
+										</span>
+									{/if}
+								</div>
 							</div>
 							<button 
 								onclick={() => showSidebar = !showSidebar}
-								class="rounded-lg bg-indigo-700 p-2 text-indigo-100 hover:bg-indigo-800 hover:text-white transition-colors ml-4"
+								class="rounded-lg bg-green-700 p-2 text-green-100 hover:bg-green-800 hover:text-white transition-colors ml-4"
 								title="Toggle sidebar"
 							>
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -425,22 +578,6 @@ Please format this as a professional startup evaluation memo that a VC would pre
 								</svg>
 							</button>
 						</div>
-						
-						<!-- Progress Bar in header -->
-						{#if isActiveChatMode}
-							<div class="mt-3">
-								<div class="flex items-center justify-between text-sm text-indigo-200 mb-2">
-									<span>Progress</span>
-									<span>Question {currentQuestionIndex + 1} of {VC_QUESTIONS.length}</span>
-								</div>
-								<div class="bg-indigo-700 h-2 rounded-full">
-									<div 
-										class="bg-white h-2 rounded-full transition-all duration-300" 
-										style="width: {((currentQuestionIndex + 1) / VC_QUESTIONS.length) * 100}%"
-									></div>
-								</div>
-							</div>
-						{/if}
 					</div>
 					
 					<!-- Messages Container -->
@@ -450,24 +587,36 @@ Please format this as a professional startup evaluation memo that a VC would pre
 					>
 						{#each messages as message, index (index)}
 							<div class="flex {message.type === 'user' ? 'justify-end' : 'justify-start'}">
-								<div class="max-w-lg {message.type === 'user' 
-									? 'bg-indigo-600 text-white' 
+								<div class="max-w-2xl {message.type === 'user' 
+									? 'bg-green-600 text-white' 
 									: 'bg-gray-100 text-gray-900'} rounded-lg px-4 py-3">
 									<div class="text-sm font-medium mb-1">
-										{message.type === 'user' ? 'You' : 'VC Partner'}
+										{message.type === 'user' ? 'EIR' : 'Fidelity Labs VC Sarah'}
 									</div>
 									<div class="whitespace-pre-wrap text-sm">{message.content}</div>
 								</div>
 							</div>
 						{/each}
 
+						{#if isGeneratingResponse}
+							<div class="flex justify-start">
+								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
+									<div class="text-sm font-medium mb-1">Fidelity Labs VC Sarah</div>
+									<div class="flex items-center space-x-2">
+										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+										<span class="text-sm">Thinking...</span>
+									</div>
+								</div>
+							</div>
+						{/if}
+
 						{#if isGeneratingMemo}
 							<div class="flex justify-start">
 								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">VC Partner</div>
+									<div class="text-sm font-medium mb-1">Fidelity Labs VC Sarah</div>
 									<div class="flex items-center space-x-2">
-										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-										<span class="text-sm">Generating your startup memo...</span>
+										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+										<span class="text-sm">Generating your investment memo...</span>
 									</div>
 								</div>
 							</div>
@@ -477,28 +626,21 @@ Please format this as a professional startup evaluation memo that a VC would pre
 					<!-- Input Area -->
 					{#if !isComplete}
 						<div class="border-t bg-gray-50 p-6 flex-shrink-0">
-							<div class="flex flex-col space-y-4">
-								<!-- Text Input -->
-								<div class="flex space-x-3">
-									<textarea
-										bind:value={userInput}
-										onkeydown={handleKeydown}
-										placeholder="Type your answer here..."
-										class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-										rows="3"
-									></textarea>
-									<Button onclick={sendMessage} disabled={!userInput.trim()}>
+							<div class="flex space-x-3">
+								<textarea
+									bind:value={userInput}
+									onkeydown={handleKeydown}
+									placeholder="Describe your venture concept and how it leverages Fidelity's assets..."
+									class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none h-20"
+									disabled={isGeneratingResponse}
+									bind:this={textareaElement}
+								></textarea>
+								<div class="flex flex-col space-y-2">
+									<Button onclick={sendMessage} disabled={!userInput.trim() || isGeneratingResponse}>
 										{#snippet children()}Send{/snippet}
 									</Button>
-								</div>
-
-								<!-- Action Buttons -->
-								<div class="flex space-x-3">
-									<Button variant="outline" onclick={handleDontKnow}>
-										{#snippet children()}I Don't Know{/snippet}
-									</Button>
-									<Button variant="outline" onclick={handleHelpWithResearch}>
-										{#snippet children()}Help with Research{/snippet}
+									<Button onclick={handleResearchLater} disabled={!userInput.trim() || isGeneratingResponse} variant="outline">
+										{#snippet children()}Research Later{/snippet}
 									</Button>
 								</div>
 							</div>
@@ -563,7 +705,7 @@ Please format this as a professional startup evaluation memo that a VC would pre
 	}
 	
 	:global(.prose blockquote) {
-		border-left: 4px solid #6366f1;
+		border-left: 4px solid #16a34a;
 		padding-left: 1rem;
 		font-style: italic;
 		color: #4b5563;
