@@ -397,30 +397,17 @@ Write in a professional, analytical tone. Include specific data points, company 
 							</div>
 						{:else}
 							{#each historicalReports as report}
-								<div class="border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedReport?.id === report.id ? 'bg-blue-50 border-blue-200' : ''}">
-									<div class="flex items-center">
-										<button
-											onclick={() => selectReport(report)}
-											class="flex-1 p-4 text-left"
-										>
-											<div class="font-medium text-gray-900 text-sm truncate">
-												{report.title || report.topic}
-											</div>
-											<div class="text-xs text-gray-500 mt-1">
-												{formatDate(report.timestamp)}
-											</div>
-										</button>
-										<button
-											onclick={(event) => deleteReport(report.id, event)}
-											class="p-2 m-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-											title="Delete report"
-										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-											</svg>
-										</button>
+								<button
+									onclick={() => selectReport(report)}
+									class="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedReport?.id === report.id ? 'bg-blue-50 border-blue-200' : ''}"
+								>
+									<div class="font-medium text-gray-900 text-sm truncate">
+										{report.title || report.topic}
 									</div>
-								</div>
+									<div class="text-xs text-gray-500 mt-1">
+										{formatDate(report.timestamp)}
+									</div>
+								</button>
 							{/each}
 						{/if}
 					</div>
@@ -436,7 +423,6 @@ Write in a professional, analytical tone. Include specific data points, company 
 					<div class="bg-blue-600 px-6 py-4 flex items-center justify-between">
 						<div>
 							<h2 class="text-xl font-bold text-white">Market Research Report</h2>
-							<p class="text-blue-100 mt-1">{currentTopic}</p>
 						</div>
 						<div class="flex items-center space-x-3">
 							<Button onclick={startNewResearch} variant="secondary" size="sm">
@@ -454,6 +440,21 @@ Write in a professional, analytical tone. Include specific data points, company 
 						</div>
 					</div>
 					<div class="flex-1 overflow-y-auto p-8">
+						{#if selectedReport}
+							<!-- Report Title with Delete Button -->
+							<div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+								<h1 class="text-2xl font-bold text-gray-900">{selectedReport.title || selectedReport.topic}</h1>
+								<button
+									onclick={(event) => deleteReport(selectedReport!.id, event)}
+									class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+									title="Delete this report"
+								>
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+									</svg>
+								</button>
+							</div>
+						{/if}
 						<div class="prose max-w-none">
 							{@html renderMarkdown(finalReport)}
 						</div>
