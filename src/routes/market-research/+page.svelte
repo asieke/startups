@@ -422,7 +422,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
 					<div class="bg-blue-600 px-6 py-4 flex items-center justify-between">
 						<div>
-							<h2 class="text-xl font-bold text-white">{selectedReport ? (selectedReport.title || selectedReport.topic) : 'Research Report'}</h2>
+							<h2 class="text-xl font-bold text-white">Market Research Report</h2>
 						</div>
 						<div class="flex items-center space-x-3">
 							{#if selectedReport}
