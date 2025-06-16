@@ -247,8 +247,10 @@ Write your findings in a comprehensive, analytical tone with specific details an
 
 **IMPORTANT: Output the report in clean MARKDOWN format with proper headers, bullet points, and formatting.**
 
+**TITLE REQUIREMENTS: Create a concise 3-6 word title that captures the essence of the topic. Do NOT include "Market Research Report" in the title - just use the topic name or a variation of it.**
+
 Structure your report with these sections:
-# ${topic}
+# [Create a concise 3-6 word title for ${topic}]
 
 ## Executive Summary
 Provide a 3-4 paragraph executive summary covering key findings, market size, major trends, and strategic recommendations.
