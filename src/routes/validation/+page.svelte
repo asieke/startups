@@ -26,7 +26,7 @@
 	let isGeneratingResponse = $state(false);
 	let generatedMemo = $state('');
 	let researchTopics = $state<string[]>([]);
-	
+
 	// Historical memos state
 	let historicalMemos = $state<MemoData[]>([]);
 	let selectedMemo = $state<MemoData | null>(null);
@@ -38,10 +38,12 @@
 	// Initialize with first message
 	$effect(() => {
 		if (messages.length === 0 && !selectedMemo) {
-			messages = [{
-				type: 'vc',
-				content: `Sarah, Fidelity Labs VC. What problem are you solving and how?`
-			}];
+			messages = [
+				{
+					type: 'vc',
+					content: `Sarah, Fidelity Labs VC. What problem are you solving and how?`
+				}
+			];
 		}
 	});
 
@@ -67,15 +69,19 @@
 			}
 		}
 		// Sort by timestamp, newest first
-		historicalMemos = memos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+		historicalMemos = memos.sort(
+			(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+		);
 	}
 
 	function startNewSession() {
 		selectedMemo = null;
-		messages = [{
-			type: 'vc',
-			content: `Sarah, Fidelity Labs VC. What problem are you solving and how?`
-		}];
+		messages = [
+			{
+				type: 'vc',
+				content: `Sarah, Fidelity Labs VC. What problem are you solving and how?`
+			}
+		];
 		userInput = '';
 		isComplete = false;
 		isGeneratingMemo = false;
@@ -102,16 +108,16 @@
 			content: userInput.trim()
 		};
 		messages = [...messages, newUserMessage];
-		
+
 		const currentInput = userInput;
 		userInput = '';
 		isGeneratingResponse = true;
 
 		try {
 			// Generate AI response using the conversation context
-			const conversationHistory = messages.map(msg => 
-				`${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`
-			).join('\n\n');
+			const conversationHistory = messages
+				.map((msg) => `${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`)
+				.join('\n\n');
 
 			const systemPrompt = `You are Sarah, a VC partner at Fidelity Labs, the corporate innovation incubator at Fidelity Investments. You are conducting a startup evaluation session with an Entrepreneur in Residence (EIR) who is proposing a new venture to be developed as a wholly owned Fidelity startup.
 
@@ -158,14 +164,14 @@ Respond as Fidelity Labs VC partner Sarah with ONE crisp sentence:`;
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ 
+				body: JSON.stringify({
 					prompt: systemPrompt,
 					schema: {
 						type: 'object',
 						properties: {
 							response: {
 								type: 'string',
-								description: 'VC Sarah\'s response to the entrepreneur'
+								description: "VC Sarah's response to the entrepreneur"
 							}
 						},
 						required: ['response']
@@ -174,7 +180,7 @@ Respond as Fidelity Labs VC partner Sarah with ONE crisp sentence:`;
 			});
 
 			const result = await response.json();
-			
+
 			if (result.error) {
 				throw new Error(result.error);
 			}
@@ -190,27 +196,35 @@ Respond as Fidelity Labs VC partner Sarah with ONE crisp sentence:`;
 			}
 
 			// Add VC response
-			messages = [...messages, {
-				type: 'vc',
-				content: vcResponse.trim()
-			}];
+			messages = [
+				...messages,
+				{
+					type: 'vc',
+					content: vcResponse.trim()
+				}
+			];
 
 			// Check if VC is ready to generate memo
-			if (vcResponse.toLowerCase().includes('i have enough for the memo') || 
+			if (
+				vcResponse.toLowerCase().includes('i have enough for the memo') ||
 				vcResponse.toLowerCase().includes('generate that for you') ||
-				vcResponse.toLowerCase().includes('prepare a detailed investment evaluation memo')) {
+				vcResponse.toLowerCase().includes('prepare a detailed investment evaluation memo')
+			) {
 				isComplete = true;
 				setTimeout(() => {
 					generateStartupMemo();
 				}, 1000);
 			}
-
 		} catch (error) {
 			console.error('Error generating VC response:', error);
-			messages = [...messages, {
-				type: 'vc',
-				content: "I apologize, there was a technical issue. Could you please repeat your last response?"
-			}];
+			messages = [
+				...messages,
+				{
+					type: 'vc',
+					content:
+						'I apologize, there was a technical issue. Could you please repeat your last response?'
+				}
+			];
 		} finally {
 			isGeneratingResponse = false;
 		}
@@ -218,22 +232,28 @@ Respond as Fidelity Labs VC partner Sarah with ONE crisp sentence:`;
 
 	async function generateStartupMemo() {
 		isGeneratingMemo = true;
-		
+
 		try {
 			// Bundle the conversation for the memo generation
 			const conversationContext = messages
-				.map((msg, index) => `${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`)
+				.map(
+					(msg, index) => `${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`
+				)
 				.join('\n\n');
 
 			const prompt = `Based on the following comprehensive evaluation conversation between a Fidelity Labs VC partner and an Entrepreneur in Residence (EIR), generate a detailed professional corporate venture investment memo for the Fidelity Labs leadership team.
 
 CONTEXT: This is a proposed wholly owned Fidelity venture being evaluated within the Fidelity Labs corporate incubator program. The EIR is proposing to build this as an internal startup.
 
-${researchTopics.length > 0 ? `
+${
+	researchTopics.length > 0
+		? `
 DEFERRED RESEARCH TOPICS:
 The following topics were marked for later Google research during the conversation:
 ${researchTopics.map((topic, index) => `${index + 1}. ${topic}`).join('\n')}
-` : ''}
+`
+		: ''
+}
 
 The memo should be thorough, analytical, and tailored for corporate venture evaluation with sections:
 
@@ -254,9 +274,13 @@ ${researchTopics.length > 0 ? '14. **Required Research** - Topics requiring Goog
 
 Use professional corporate venture language, emphasize strategic fit with Fidelity, include specific data points from the conversation, and provide actionable next steps. Format with clear markdown headers and bullet points.
 
-${researchTopics.length > 0 ? `
+${
+	researchTopics.length > 0
+		? `
 In the "Required Research" section, list the deferred research topics and suggest specific Google searches and market research needed to complete the evaluation.
-` : ''}
+`
+		: ''
+}
 
 Conversation between Fidelity Labs VC Partner Sarah and EIR:
 ${conversationContext}
@@ -272,13 +296,13 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 			});
 
 			const result = await response.json();
-			
+
 			if (result.error) {
 				throw new Error(result.error);
 			}
 
 			generatedMemo = result.text;
-			
+
 			// Save to localStorage for future reference
 			const memoData = {
 				timestamp: new Date().toISOString(),
@@ -287,15 +311,15 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 				title: extractTitleFromMemo(generatedMemo),
 				researchTopics: researchTopics
 			};
-			
+
 			localStorage.setItem(`fidelity-labs-session-${Date.now()}`, JSON.stringify(memoData));
-			
+
 			// Reload historical memos
 			loadHistoricalMemos();
-
 		} catch (error) {
 			console.error('Error generating memo:', error);
-			generatedMemo = "**Error generating memo**\n\nI apologize, but there was an error generating your startup memo. Please try again later.";
+			generatedMemo =
+				'**Error generating memo**\n\nI apologize, but there was an error generating your startup memo. Please try again later.';
 		} finally {
 			isGeneratingMemo = false;
 		}
@@ -331,12 +355,15 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 	}
 
 	// Auto scroll to bottom when new messages arrive
-	let messagesContainer: HTMLDivElement;
-	let textareaElement: HTMLTextAreaElement;
+	let messagesContainer: HTMLDivElement | null = $state(null);
+	let textareaElement: HTMLTextAreaElement | null = $state(null);
+
 	$effect(() => {
-		if (messagesContainer && messages.length > 0) {
+		if (messages.length > 0 && messagesContainer) {
 			setTimeout(() => {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+				if (messagesContainer) {
+					messagesContainer.scrollTop = messagesContainer.scrollHeight;
+				}
 			}, 100);
 		}
 	});
@@ -345,7 +372,9 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 	$effect(() => {
 		if (!isGeneratingResponse && !isGeneratingMemo && textareaElement) {
 			setTimeout(() => {
-				textareaElement.focus();
+				if (textareaElement) {
+					textareaElement.focus();
+				}
 			}, 100);
 		}
 	});
@@ -376,10 +405,13 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 		researchTopics = [...researchTopics, currentTopic];
 
 		// Add user message indicating research needed
-		messages = [...messages, {
-			type: 'user',
-			content: `Research Later: ${userInput.trim()}`
-		}];
+		messages = [
+			...messages,
+			{
+				type: 'user',
+				content: `Research Later: ${userInput.trim()}`
+			}
+		];
 
 		const currentInput = userInput;
 		userInput = '';
@@ -387,9 +419,9 @@ Generate a comprehensive Fidelity Labs investment evaluation memo:`;
 
 		try {
 			// Generate AI response for moving to next topic
-			const conversationHistory = messages.map(msg => 
-				`${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`
-			).join('\n\n');
+			const conversationHistory = messages
+				.map((msg) => `${msg.type === 'vc' ? 'Fidelity Labs VC Sarah' : 'EIR'}: ${msg.content}`)
+				.join('\n\n');
 
 			const systemPrompt = `You are Sarah, a VC partner at Fidelity Labs. The EIR just said they need to research a topic later. 
 
@@ -411,14 +443,14 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ 
+				body: JSON.stringify({
 					prompt: systemPrompt,
 					schema: {
 						type: 'object',
 						properties: {
 							response: {
 								type: 'string',
-								description: 'VC Sarah\'s brief response moving to next topic'
+								description: "VC Sarah's brief response moving to next topic"
 							}
 						},
 						required: ['response']
@@ -427,7 +459,7 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 			});
 
 			const result = await response.json();
-			
+
 			if (result.error) {
 				throw new Error(result.error);
 			}
@@ -442,10 +474,13 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 			}
 
 			// Add VC response
-			messages = [...messages, {
-				type: 'vc',
-				content: vcResponse.trim()
-			}];
+			messages = [
+				...messages,
+				{
+					type: 'vc',
+					content: vcResponse.trim()
+				}
+			];
 
 			// Check if VC is ready to generate memo
 			if (vcResponse.toLowerCase().includes('i have enough for the memo')) {
@@ -454,45 +489,52 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 					generateStartupMemo();
 				}, 1000);
 			}
-
 		} catch (error) {
 			console.error('Error generating VC response:', error);
-			messages = [...messages, {
-				type: 'vc',
-				content: "Got it, moving on."
-			}];
+			messages = [
+				...messages,
+				{
+					type: 'vc',
+					content: 'Got it, moving on.'
+				}
+			];
 		} finally {
 			isGeneratingResponse = false;
 		}
 	}
+
+	let isSendDisabled = $derived(userInput.trim().length === 0 || isGeneratingResponse);
 </script>
 
 <!-- Main Container with proper spacing like other pages -->
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 	<!-- Main Content Layout -->
-	<div class="flex gap-8 h-[calc(100vh-8rem)]">
+	<div class="flex h-[calc(100vh-8rem)] gap-8">
 		<!-- Sidebar for Historical Memos -->
 		{#if showSidebar}
 			<div class="w-80 flex-shrink-0">
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm h-full">
-					<div class="p-4 border-b border-gray-200">
+				<div class="h-full rounded-lg border border-gray-200 bg-white shadow-sm">
+					<div class="border-b border-gray-200 p-4">
 						<h2 class="text-lg font-semibold text-gray-900">Previous Evaluations</h2>
 					</div>
 					<div class="overflow-y-auto" style="height: calc(100% - 4rem);">
 						{#if historicalMemos.length === 0}
-							<div class="p-4 text-gray-500 text-sm">
+							<div class="p-4 text-sm text-gray-500">
 								No previous evaluations yet. Complete a venture assessment to see your memos here.
 							</div>
 						{:else}
 							{#each historicalMemos as memo}
 								<button
 									onclick={() => selectMemo(memo)}
-									class="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedMemo?.id === memo.id ? 'bg-indigo-50 border-indigo-200' : ''}"
+									class="w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 {selectedMemo?.id ===
+									memo.id
+										? 'border-indigo-200 bg-indigo-50'
+										: ''}"
 								>
-									<div class="font-medium text-gray-900 text-sm truncate">
+									<div class="truncate text-sm font-medium text-gray-900">
 										{memo.title || 'Untitled Session'}
 									</div>
-									<div class="text-xs text-gray-500 mt-1">
+									<div class="mt-1 text-xs text-gray-500">
 										{formatDate(memo.timestamp)}
 									</div>
 								</button>
@@ -504,26 +546,34 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 		{/if}
 
 		<!-- Main Content Area -->
-		<div class="flex-1 min-w-0">
+		<div class="min-w-0 flex-1">
 			{#if generatedMemo}
 				<!-- Memo Display -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
-					<div class="bg-green-600 px-6 py-4 flex items-center justify-between">
+				<div
+					class="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+				>
+					<div class="flex items-center justify-between bg-green-600 px-6 py-4">
 						<div>
 							<h2 class="text-xl font-bold text-white">Fidelity Labs Investment Evaluation</h2>
-							<p class="text-green-100 mt-1">Corporate venture assessment and recommendation</p>
+							<p class="mt-1 text-green-100">Corporate venture assessment and recommendation</p>
 						</div>
 						<div class="flex items-center space-x-3">
 							<Button onclick={startNewSession} variant="secondary" size="sm">
 								{#snippet children()}New Session{/snippet}
 							</Button>
-							<button 
-								onclick={() => showSidebar = !showSidebar}
-								class="rounded-lg bg-green-700 p-2 text-green-100 hover:bg-green-800 hover:text-white transition-colors"
+							<!-- svelte-ignore a11y_consider_explicit_label -->
+							<button
+								onclick={() => (showSidebar = !showSidebar)}
+								class="rounded-lg bg-green-700 p-2 text-green-100 transition-colors hover:bg-green-800 hover:text-white"
 								title="Toggle sidebar"
 							>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									></path>
 								</svg>
 							</button>
 						</div>
@@ -536,16 +586,31 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 				</div>
 			{:else if messages.length === 0 && historicalMemos.length > 0}
 				<!-- Welcome state with historical memos -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center h-full flex flex-col justify-center">
+				<div
+					class="flex h-full flex-col justify-center rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm"
+				>
 					<div class="mb-6">
-						<div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-							<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+						<div
+							class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100"
+						>
+							<svg
+								class="h-8 w-8 text-green-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+								></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome to Fidelity Labs</h3>
-						<p class="text-gray-600 max-w-md mx-auto">
-							Start a new venture evaluation session with Fidelity Labs VC partner Sarah, or browse your previous assessments from the sidebar.
+						<h3 class="mb-2 text-xl font-semibold text-gray-900">Welcome to Fidelity Labs</h3>
+						<p class="mx-auto max-w-md text-gray-600">
+							Start a new venture evaluation session with Fidelity Labs VC partner Sarah, or browse
+							your previous assessments from the sidebar.
 						</p>
 					</div>
 					<Button onclick={startNewSession}>
@@ -554,56 +619,68 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 				</div>
 			{:else}
 				<!-- Chat Interface -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
-					<div class="bg-green-600 px-6 py-4 flex-shrink-0">
+				<div
+					class="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+				>
+					<div class="flex-shrink-0 bg-green-600 px-6 py-4">
 						<div class="flex items-center justify-between">
 							<div class="flex-1">
 								<h2 class="text-xl font-bold text-white">Fidelity Labs VC Partner Sarah</h2>
 								<div class="flex items-center space-x-4">
-									<p class="text-green-100 mt-1">Corporate venture evaluation session</p>
+									<p class="mt-1 text-green-100">Corporate venture evaluation session</p>
 									{#if researchTopics.length > 0}
-										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-											{researchTopics.length} research topic{researchTopics.length === 1 ? '' : 's'} deferred
+										<span
+											class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800"
+										>
+											{researchTopics.length} research topic{researchTopics.length === 1 ? '' : 's'}
+											deferred
 										</span>
 									{/if}
 								</div>
 							</div>
-							<button 
-								onclick={() => showSidebar = !showSidebar}
-								class="rounded-lg bg-green-700 p-2 text-green-100 hover:bg-green-800 hover:text-white transition-colors ml-4"
+							<!-- svelte-ignore a11y_consider_explicit_label -->
+							<button
+								onclick={() => (showSidebar = !showSidebar)}
+								class="ml-4 rounded-lg bg-green-700 p-2 text-green-100 transition-colors hover:bg-green-800 hover:text-white"
 								title="Toggle sidebar"
 							>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									></path>
 								</svg>
 							</button>
 						</div>
 					</div>
-					
+
 					<!-- Messages Container -->
-					<div 
-						bind:this={messagesContainer}
-						class="flex-1 overflow-y-auto p-6 space-y-4"
-					>
+					<div bind:this={messagesContainer} class="flex-1 space-y-4 overflow-y-auto p-6">
 						{#each messages as message, index (index)}
 							<div class="flex {message.type === 'user' ? 'justify-end' : 'justify-start'}">
-								<div class="max-w-2xl {message.type === 'user' 
-									? 'bg-green-600 text-white' 
-									: 'bg-gray-100 text-gray-900'} rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">
+								<div
+									class="max-w-2xl {message.type === 'user'
+										? 'bg-green-600 text-white'
+										: 'bg-gray-100 text-gray-900'} rounded-lg px-4 py-3"
+								>
+									<div class="mb-1 text-sm font-medium">
 										{message.type === 'user' ? 'EIR' : 'Fidelity Labs VC Sarah'}
 									</div>
-									<div class="whitespace-pre-wrap text-sm">{message.content}</div>
+									<div class="text-sm whitespace-pre-wrap">{message.content}</div>
 								</div>
 							</div>
 						{/each}
 
 						{#if isGeneratingResponse}
 							<div class="flex justify-start">
-								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">Fidelity Labs VC Sarah</div>
+								<div class="rounded-lg bg-gray-100 px-4 py-3 text-gray-900">
+									<div class="mb-1 text-sm font-medium">Fidelity Labs VC Sarah</div>
 									<div class="flex items-center space-x-2">
-										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+										<div
+											class="h-4 w-4 animate-spin rounded-full border-b-2 border-green-600"
+										></div>
 										<span class="text-sm">Thinking...</span>
 									</div>
 								</div>
@@ -612,10 +689,12 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 
 						{#if isGeneratingMemo}
 							<div class="flex justify-start">
-								<div class="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
-									<div class="text-sm font-medium mb-1">Fidelity Labs VC Sarah</div>
+								<div class="rounded-lg bg-gray-100 px-4 py-3 text-gray-900">
+									<div class="mb-1 text-sm font-medium">Fidelity Labs VC Sarah</div>
 									<div class="flex items-center space-x-2">
-										<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+										<div
+											class="h-4 w-4 animate-spin rounded-full border-b-2 border-green-600"
+										></div>
 										<span class="text-sm">Generating your investment memo...</span>
 									</div>
 								</div>
@@ -625,23 +704,31 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 
 					<!-- Input Area -->
 					{#if !isComplete}
-						<div class="border-t bg-gray-50 p-6 flex-shrink-0">
+						<div class="flex-shrink-0 border-t bg-gray-50 p-6">
 							<div class="flex space-x-3">
 								<textarea
 									bind:value={userInput}
 									onkeydown={handleKeydown}
 									placeholder="Describe your venture concept and how it leverages Fidelity's assets..."
-									class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none h-20"
+									class="h-20 flex-1 resize-none rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500 focus:outline-none"
 									disabled={isGeneratingResponse}
 									bind:this={textareaElement}
 								></textarea>
-								<div class="flex flex-col space-y-2">
-									<Button onclick={sendMessage} disabled={!userInput.trim() || isGeneratingResponse}>
-										{#snippet children()}Send{/snippet}
-									</Button>
-									<Button onclick={handleResearchLater} disabled={!userInput.trim() || isGeneratingResponse} variant="outline">
-										{#snippet children()}Research Later{/snippet}
-									</Button>
+								<div class="flex flex-col">
+									<button
+										onclick={sendMessage}
+										disabled={isSendDisabled}
+										class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										Send
+									</button>
+									<button
+										onclick={handleResearchLater}
+										disabled={!userInput.trim() || isGeneratingResponse}
+										class="mt-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										Research Later
+									</button>
 								</div>
 							</div>
 						</div>
@@ -662,7 +749,7 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 		padding-bottom: 0.5rem;
 		border-bottom: 2px solid #e5e7eb;
 	}
-	
+
 	:global(.prose h2) {
 		font-size: 1.5rem;
 		font-weight: 600;
@@ -670,7 +757,7 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 		margin-top: 2rem;
 		margin-bottom: 1rem;
 	}
-	
+
 	:global(.prose h3) {
 		font-size: 1.25rem;
 		font-weight: 600;
@@ -678,32 +765,32 @@ Respond with ONE sentence acknowledging and moving to the next topic:`;
 		margin-top: 1.5rem;
 		margin-bottom: 0.75rem;
 	}
-	
+
 	:global(.prose p) {
 		color: #374151;
 		line-height: 1.625;
 		margin-bottom: 1rem;
 	}
-	
+
 	:global(.prose ul) {
 		margin-bottom: 1rem;
 	}
-	
+
 	:global(.prose li) {
 		color: #374151;
 		margin-bottom: 0.5rem;
 	}
-	
+
 	:global(.prose strong) {
 		font-weight: 600;
 		color: #111827;
 	}
-	
+
 	:global(.prose em) {
 		font-style: italic;
 		color: #1f2937;
 	}
-	
+
 	:global(.prose blockquote) {
 		border-left: 4px solid #16a34a;
 		padding-left: 1rem;

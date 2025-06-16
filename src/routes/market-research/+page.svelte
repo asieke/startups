@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Button from '$lib/components/Button.svelte';
 	import { marked } from 'marked';
 	import { onMount } from 'svelte';
 
@@ -21,13 +20,13 @@
 	let currentSubtopic = $state('');
 	let progress = $state(0);
 	let maxProgress = $state(100);
-	
+
 	// Research data
 	let currentTopic = $state('');
 	let subtopics = $state<string[]>([]);
 	let researchSections = $state<Record<string, string>>({});
 	let finalReport = $state('');
-	
+
 	// Historical reports state
 	let historicalReports = $state<ResearchReport[]>([]);
 	let selectedReport = $state<ResearchReport | null>(null);
@@ -55,7 +54,9 @@
 			}
 		}
 		// Sort by timestamp, newest first
-		historicalReports = reports.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+		historicalReports = reports.sort(
+			(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+		);
 	}
 
 	function startNewResearch() {
@@ -82,17 +83,19 @@
 
 	function deleteReport(reportId: string, event: Event) {
 		event.stopPropagation(); // Prevent selecting the report when clicking delete
-		
-		if (confirm('Are you sure you want to delete this research report? This action cannot be undone.')) {
+
+		if (
+			confirm('Are you sure you want to delete this research report? This action cannot be undone.')
+		) {
 			// Remove from localStorage
 			localStorage.removeItem(reportId);
-			
+
 			// If this was the selected report, clear the selection
 			if (selectedReport?.id === reportId) {
 				selectedReport = null;
 				startNewResearch();
 			}
-			
+
 			// Reload the historical reports list
 			loadHistoricalReports();
 		}
@@ -111,18 +114,18 @@
 		try {
 			// Step 1: Generate subtopics
 			await generateSubtopics(currentTopic);
-			
+
 			// Step 2: Research each subtopic
 			currentStep = 'searching';
 			await researchAllSubtopics(currentTopic, subtopics);
-			
+
 			// Step 3: Assemble final report
 			currentStep = 'assembling';
 			await assembleReport(currentTopic, researchSections);
-			
+
 			// Save to localStorage
 			await saveReport();
-			
+
 			currentStep = 'complete';
 		} catch (error) {
 			console.error('Research failed:', error);
@@ -164,7 +167,7 @@ Return as a numbered list with brief descriptions for each subtopic.`;
 		});
 
 		const result = await response.json();
-		
+
 		if (result.error) {
 			throw new Error(result.error);
 		}
@@ -183,17 +186,17 @@ Return as a numbered list with brief descriptions for each subtopic.`;
 	async function researchAllSubtopics(topic: string, subtopicList: string[]): Promise<void> {
 		const sections: Record<string, string> = {};
 		const progressPerSubtopic = 60 / subtopicList.length; // 60% of total progress for research phase
-		
+
 		for (let i = 0; i < subtopicList.length; i++) {
 			const subtopic = subtopicList[i];
 			currentSubtopic = `Researching: ${subtopic}`;
-			
+
 			const sectionContent = await searchTopic(topic, subtopic);
 			sections[subtopic] = sectionContent;
-			
-			progress = 20 + ((i + 1) * progressPerSubtopic);
+
+			progress = 20 + (i + 1) * progressPerSubtopic;
 		}
-		
+
 		researchSections = sections;
 	}
 
@@ -220,14 +223,14 @@ Write your findings in a comprehensive, analytical tone with specific details an
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ 
+			body: JSON.stringify({
 				prompt,
 				model: 'gemini-2.5-pro-preview-06-05'
 			})
 		});
 
 		const result = await response.json();
-		
+
 		if (result.error) {
 			throw new Error(result.error);
 		}
@@ -298,14 +301,14 @@ Write in a professional, analytical tone. Include specific data points, company 
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ 
+			body: JSON.stringify({
 				prompt,
 				model: 'gemini-2.5-pro-preview-06-05'
 			})
 		});
 
 		const result = await response.json();
-		
+
 		if (result.error) {
 			throw new Error(result.error);
 		}
@@ -323,9 +326,9 @@ Write in a professional, analytical tone. Include specific data points, company 
 			finalReport: finalReport,
 			title: extractTitleFromReport(finalReport) || currentTopic
 		};
-		
+
 		localStorage.setItem(`market-research-report-${Date.now()}`, JSON.stringify(reportData));
-		
+
 		// Reload historical reports
 		loadHistoricalReports();
 	}
@@ -367,7 +370,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 			if (typeof result === 'string') {
 				return result;
 			} else {
-				// If it's a Promise, return the original text for now  
+				// If it's a Promise, return the original text for now
 				console.warn('Marked returned a Promise, using original text');
 				return text;
 			}
@@ -384,29 +387,33 @@ Write in a professional, analytical tone. Include specific data points, company 
 <!-- Main Container with proper spacing like other pages -->
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 	<!-- Main Content Layout -->
-	<div class="flex gap-8 h-[calc(100vh-8rem)]">
+	<div class="flex h-[calc(100vh-8rem)] gap-8">
 		<!-- Sidebar for Historical Reports -->
 		{#if showSidebar}
 			<div class="w-80 flex-shrink-0">
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm h-full">
-					<div class="p-4 border-b border-gray-200">
+				<div class="h-full rounded-lg border border-gray-200 bg-white shadow-sm">
+					<div class="border-b border-gray-200 p-4">
 						<h2 class="text-lg font-semibold text-gray-900">Previous Research</h2>
 					</div>
 					<div class="overflow-y-auto" style="height: calc(100% - 4rem);">
 						{#if historicalReports.length === 0}
-							<div class="p-4 text-gray-500 text-sm">
-								No previous research reports yet. Conduct your first market research to see reports here.
+							<div class="p-4 text-sm text-gray-500">
+								No previous research reports yet. Conduct your first market research to see reports
+								here.
 							</div>
 						{:else}
 							{#each historicalReports as report}
 								<button
 									onclick={() => selectReport(report)}
-									class="w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors {selectedReport?.id === report.id ? 'bg-blue-50 border-blue-200' : ''}"
+									class="w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 {selectedReport?.id ===
+									report.id
+										? 'border-blue-200 bg-blue-50'
+										: ''}"
 								>
-									<div class="font-medium text-gray-900 text-sm truncate">
+									<div class="truncate text-sm font-medium text-gray-900">
 										{report.title || report.topic}
 									</div>
-									<div class="text-xs text-gray-500 mt-1">
+									<div class="mt-1 text-xs text-gray-500">
 										{formatDate(report.timestamp)}
 									</div>
 								</button>
@@ -418,36 +425,53 @@ Write in a professional, analytical tone. Include specific data points, company 
 		{/if}
 
 		<!-- Main Content Area -->
-		<div class="flex-1 min-w-0">
+		<div class="min-w-0 flex-1">
 			{#if finalReport && currentStep === 'complete'}
 				<!-- Report Display -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
-					<div class="bg-blue-600 px-6 py-4 flex items-center justify-between">
+				<div
+					class="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+				>
+					<div class="flex items-center justify-between bg-blue-600 px-6 py-4">
 						<div>
 							<h2 class="text-xl font-bold text-white">Market Research Report</h2>
 						</div>
 						<div class="flex items-center space-x-3">
 							{#if selectedReport}
+								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button
 									onclick={(event) => deleteReport(selectedReport!.id, event)}
-									class="rounded-lg bg-red-600 hover:bg-red-700 p-2 text-white transition-colors"
+									class="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700"
 									title="Delete this report"
 								>
-									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										></path>
 									</svg>
 								</button>
 							{/if}
-							<Button onclick={startNewResearch} variant="secondary" size="sm">
-								{#snippet children()}New Research{/snippet}
-							</Button>
-							<button 
-								onclick={() => showSidebar = !showSidebar}
-								class="rounded-lg bg-blue-700 p-2 text-blue-100 hover:bg-blue-800 hover:text-white transition-colors"
+							<button
+								onclick={startNewResearch}
+								class="rounded-md bg-indigo-100 px-3 py-1.5 text-sm font-semibold text-indigo-700 transition-colors duration-200 hover:bg-indigo-200 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+							>
+								New Research
+							</button>
+							<!-- svelte-ignore a11y_consider_explicit_label -->
+							<button
+								onclick={() => (showSidebar = !showSidebar)}
+								class="rounded-lg bg-blue-700 p-2 text-blue-100 transition-colors hover:bg-blue-800 hover:text-white"
 								title="Toggle sidebar"
 							>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									></path>
 								</svg>
 							</button>
 						</div>
@@ -460,68 +484,102 @@ Write in a professional, analytical tone. Include specific data points, company 
 				</div>
 			{:else if isResearching}
 				<!-- Research Progress -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
+				<div
+					class="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+				>
 					<div class="bg-blue-600 px-6 py-4">
 						<h2 class="text-xl font-bold text-white">Conducting Research</h2>
-						<p class="text-blue-100 mt-1">Researching: {currentTopic}</p>
+						<p class="mt-1 text-blue-100">Researching: {currentTopic}</p>
 					</div>
-					<div class="flex-1 flex flex-col justify-center items-center p-8">
+					<div class="flex flex-1 flex-col items-center justify-center p-8">
 						<div class="w-full max-w-md">
 							<!-- Progress Steps -->
 							<div class="mb-8 flex justify-center space-x-4">
 								<div class="flex flex-col items-center">
-									<div class="w-10 h-10 rounded-full flex items-center justify-center {currentStep === 'subtopics' || currentStep === 'searching' || currentStep === 'assembling' || currentStep === 'complete' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}">
+									<div
+										class="flex h-10 w-10 items-center justify-center rounded-full {currentStep ===
+											'subtopics' ||
+										currentStep === 'searching' ||
+										currentStep === 'assembling' ||
+										currentStep === 'complete'
+											? 'bg-blue-600 text-white'
+											: 'bg-gray-200 text-gray-600'}"
+									>
 										{#if currentStep === 'subtopics'}
-											<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+											<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
 										{:else if currentStep === 'searching' || currentStep === 'assembling' || currentStep === 'complete'}
-											<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
 											</svg>
 										{:else}
 											1
 										{/if}
 									</div>
-									<span class="text-xs mt-1 text-center">Break Down<br/>Topic</span>
+									<span class="mt-1 text-center text-xs">Break Down<br />Topic</span>
 								</div>
 								<div class="flex flex-col items-center">
-									<div class="w-10 h-10 rounded-full flex items-center justify-center {currentStep === 'searching' || currentStep === 'assembling' || currentStep === 'complete' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}">
+									<div
+										class="flex h-10 w-10 items-center justify-center rounded-full {currentStep ===
+											'searching' ||
+										currentStep === 'assembling' ||
+										currentStep === 'complete'
+											? 'bg-blue-600 text-white'
+											: 'bg-gray-200 text-gray-600'}"
+									>
 										{#if currentStep === 'searching'}
-											<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+											<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
 										{:else if currentStep === 'assembling' || currentStep === 'complete'}
-											<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
 											</svg>
 										{:else}
 											2
 										{/if}
 									</div>
-									<span class="text-xs mt-1 text-center">Research<br/>Subtopics</span>
+									<span class="mt-1 text-center text-xs">Research<br />Subtopics</span>
 								</div>
 								<div class="flex flex-col items-center">
-									<div class="w-10 h-10 rounded-full flex items-center justify-center {currentStep === 'assembling' || currentStep === 'complete' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}">
+									<div
+										class="flex h-10 w-10 items-center justify-center rounded-full {currentStep ===
+											'assembling' || currentStep === 'complete'
+											? 'bg-blue-600 text-white'
+											: 'bg-gray-200 text-gray-600'}"
+									>
 										{#if currentStep === 'assembling'}
-											<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+											<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
 										{:else if currentStep === 'complete'}
-											<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path
+													fill-rule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clip-rule="evenodd"
+												></path>
 											</svg>
 										{:else}
 											3
 										{/if}
 									</div>
-									<span class="text-xs mt-1 text-center">Assemble<br/>Report</span>
+									<span class="mt-1 text-center text-xs">Assemble<br />Report</span>
 								</div>
 							</div>
 
 							<!-- Progress Bar -->
 							<div class="mb-6">
-								<div class="flex justify-between text-sm text-gray-600 mb-2">
+								<div class="mb-2 flex justify-between text-sm text-gray-600">
 									<span>Progress</span>
 									<span>{progressPercentage}%</span>
 								</div>
-								<div class="w-full bg-gray-200 rounded-full h-3">
-									<div 
-										class="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+								<div class="h-3 w-full rounded-full bg-gray-200">
+									<div
+										class="h-3 rounded-full bg-blue-600 transition-all duration-500 ease-out"
 										style="width: {progressPercentage}%"
 									></div>
 								</div>
@@ -529,7 +587,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 
 							<!-- Current Status -->
 							<div class="text-center">
-								<div class="text-lg font-semibold text-gray-900 mb-2">
+								<div class="mb-2 text-lg font-semibold text-gray-900">
 									{#if currentStep === 'subtopics'}
 										Breaking Down Research Topic
 									{:else if currentStep === 'searching'}
@@ -545,20 +603,33 @@ Write in a professional, analytical tone. Include specific data points, company 
 
 							{#if subtopics.length > 0}
 								<div class="mt-8">
-									<h3 class="text-sm font-semibold text-gray-900 mb-3">Research Areas:</h3>
+									<h3 class="mb-3 text-sm font-semibold text-gray-900">Research Areas:</h3>
 									<div class="space-y-2">
 										{#each subtopics as subtopic, index}
 											<div class="flex items-center text-sm">
 												{#if currentStep === 'searching' && currentSubtopic.includes(subtopic)}
-													<div class="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+													<div
+														class="mr-2 h-3 w-3 animate-spin rounded-full border-b-2 border-blue-600"
+													></div>
 												{:else if researchSections[subtopic]}
-													<svg class="w-3 h-3 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-														<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+													<svg
+														class="mr-2 h-3 w-3 text-green-600"
+														fill="currentColor"
+														viewBox="0 0 20 20"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+															clip-rule="evenodd"
+														></path>
 													</svg>
 												{:else}
-													<div class="w-3 h-3 bg-gray-300 rounded-full mr-2"></div>
+													<div class="mr-2 h-3 w-3 rounded-full bg-gray-300"></div>
 												{/if}
-												<span class="{researchSections[subtopic] ? 'text-green-700' : 'text-gray-600'}">{subtopic}</span>
+												<span
+													class={researchSections[subtopic] ? 'text-green-700' : 'text-gray-600'}
+													>{subtopic}</span
+												>
 											</div>
 										{/each}
 									</div>
@@ -569,70 +640,107 @@ Write in a professional, analytical tone. Include specific data points, company 
 				</div>
 			{:else if historicalReports.length === 0}
 				<!-- Welcome state with no historical reports -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center h-full flex flex-col justify-center">
+				<div
+					class="flex h-full flex-col justify-center rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm"
+				>
 					<div class="mb-6">
-						<div class="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-							<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+						<div
+							class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100"
+						>
+							<svg
+								class="h-8 w-8 text-blue-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+								></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Research Intelligence</h3>
-						<p class="text-gray-600 max-w-md mx-auto mb-6">
-							Get comprehensive research reports on any topic. Our AI researches market trends, competitors, and industry insights in real-time.
+						<h3 class="mb-2 text-xl font-semibold text-gray-900">Research Intelligence</h3>
+						<p class="mx-auto mb-6 max-w-md text-gray-600">
+							Get comprehensive research reports on any topic. Our AI researches market trends,
+							competitors, and industry insights in real-time.
 						</p>
 					</div>
-					
+
 					<!-- Research Input -->
-					<div class="max-w-md mx-auto w-full">
+					<div class="mx-auto w-full max-w-md">
 						<div class="flex space-x-3">
 							<input
 								bind:value={researchInput}
 								onkeydown={handleKeydown}
 								placeholder="Enter research topic (e.g., prediction markets, AI tools, fintech...)"
-								class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+								class="flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
 								disabled={isResearching}
 							/>
-							<Button onclick={conductResearch} disabled={!researchInput.trim() || isResearching}>
-								{#snippet children()}Research{/snippet}
-							</Button>
+							<button
+								onclick={conductResearch}
+								disabled={!researchInput.trim() || isResearching}
+								class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-200 focus:outline-none {!researchInput.trim() ||
+								isResearching
+									? 'cursor-not-allowed opacity-50'
+									: ''}"
+							>
+								Research
+							</button>
 						</div>
-						{#if researchInput.trim() === ''}
-							<p class="text-xs text-gray-500 mt-2 text-center">Enter a research topic to enable the Research button</p>
-						{/if}
 					</div>
 				</div>
 			{:else}
 				<!-- Welcome state with historical reports -->
-				<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center h-full flex flex-col justify-center">
+				<div
+					class="flex h-full flex-col justify-center rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm"
+				>
 					<div class="mb-6">
-						<div class="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-							<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+						<div
+							class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100"
+						>
+							<svg
+								class="h-8 w-8 text-blue-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+								></path>
 							</svg>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-2">Research Intelligence</h3>
-						<p class="text-gray-600 max-w-md mx-auto mb-6">
+						<h3 class="mb-2 text-xl font-semibold text-gray-900">Research Intelligence</h3>
+						<p class="mx-auto mb-6 max-w-md text-gray-600">
 							Start a new research project or browse your previous reports from the sidebar.
 						</p>
 					</div>
-					
+
 					<!-- Research Input -->
-					<div class="max-w-md mx-auto w-full">
+					<div class="mx-auto w-full max-w-md">
 						<div class="flex space-x-3">
 							<input
 								bind:value={researchInput}
 								onkeydown={handleKeydown}
 								placeholder="Enter research topic (e.g., prediction markets, AI tools, fintech...)"
-								class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+								class="flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
 								disabled={isResearching}
 							/>
-							<Button onclick={conductResearch} disabled={!researchInput.trim() || isResearching}>
-								{#snippet children()}Research{/snippet}
-							</Button>
+							<button
+								onclick={conductResearch}
+								disabled={!researchInput.trim() || isResearching}
+								class="cursor-pointer rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-purple-600 focus:ring-2 focus:ring-indigo-200 focus:outline-none {!researchInput.trim() ||
+								isResearching
+									? 'cursor-not-allowed opacity-50'
+									: ''}"
+							>
+								Research
+							</button>
 						</div>
-						{#if researchInput.trim() === ''}
-							<p class="text-xs text-gray-500 mt-2 text-center">Enter a research topic to enable the Research button</p>
-						{/if}
 					</div>
 				</div>
 			{/if}
@@ -650,7 +758,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 		padding-bottom: 0.5rem;
 		border-bottom: 2px solid #e5e7eb;
 	}
-	
+
 	:global(.prose h2) {
 		font-size: 1.5rem;
 		font-weight: 600;
@@ -658,7 +766,7 @@ Write in a professional, analytical tone. Include specific data points, company 
 		margin-top: 2rem;
 		margin-bottom: 1rem;
 	}
-	
+
 	:global(.prose h3) {
 		font-size: 1.25rem;
 		font-weight: 600;
@@ -666,32 +774,32 @@ Write in a professional, analytical tone. Include specific data points, company 
 		margin-top: 1.5rem;
 		margin-bottom: 0.75rem;
 	}
-	
+
 	:global(.prose p) {
 		color: #374151;
 		line-height: 1.625;
 		margin-bottom: 1rem;
 	}
-	
+
 	:global(.prose ul) {
 		margin-bottom: 1rem;
 	}
-	
+
 	:global(.prose li) {
 		color: #374151;
 		margin-bottom: 0.5rem;
 	}
-	
+
 	:global(.prose strong) {
 		font-weight: 600;
 		color: #111827;
 	}
-	
+
 	:global(.prose em) {
 		font-style: italic;
 		color: #1f2937;
 	}
-	
+
 	:global(.prose blockquote) {
 		border-left: 4px solid #2563eb;
 		padding-left: 1rem;
