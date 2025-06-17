@@ -103,25 +103,40 @@
 	}
 
 	function countFillerWords(text: string): number {
-		const words = text.toLowerCase().split(/\s+/);
+		if (!text || text.trim().length === 0) return 0;
+		
+		const textLower = text.toLowerCase();
 		let count = 0;
 		
+		// Split into words and check individual words
+		const words = textLower.split(/\s+/);
 		for (const word of words) {
-			const cleanWord = word.replace(/[^\w\s]/g, '');
+			const cleanWord = word.replace(/[^\w]/g, ''); // Remove punctuation
 			if (fillerWords.includes(cleanWord)) {
 				count++;
 			}
 		}
 		
 		// Check for multi-word filler phrases
-		const textLower = text.toLowerCase();
 		const multiWordFillers = ['you know', 'i mean', 'you see', 'you get', 'sort of', 'kind of'];
 		for (const phrase of multiWordFillers) {
-			const matches = textLower.match(new RegExp(phrase, 'g'));
+			const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+			const matches = textLower.match(regex);
 			if (matches) {
 				count += matches.length;
+				// Remove the individual words that were already counted to avoid double counting
+				const phraseWords = phrase.split(' ');
+				for (const phraseWord of phraseWords) {
+					if (fillerWords.includes(phraseWord)) {
+						count -= matches.length; // Subtract one for each match
+					}
+				}
 			}
 		}
+		
+		// Debug logging
+		console.log(`Filler word count for text (${text.split(/\s+/).length} words):`, count);
+		console.log('Text sample:', text.substring(0, 100) + '...');
 		
 		return count;
 	}
@@ -249,11 +264,40 @@ Provide detailed, actionable coaching feedback. Be specific about what each pers
 
 			// Process speaker sections and count filler words
 			const speakerSections = extractSpeakerSections(transcriptInput);
+			console.log('AI returned speakers:', analysisData.speakerGrades.map((g: any) => g.speaker));
+			
 			const processedGrades = analysisData.speakerGrades.map((grade: any) => {
-				const speakerText = speakerSections[grade.speaker] || '';
+				// Try to find matching speaker text with flexible matching
+				let speakerText = '';
+				const gradeSpeaker = grade.speaker.toLowerCase().trim();
+				
+				// Try exact match first
+				if (speakerSections[grade.speaker]) {
+					speakerText = speakerSections[grade.speaker];
+					console.log(`Exact match found for "${grade.speaker}"`);
+				} else {
+					// Try flexible matching
+					for (const [sectionSpeaker, text] of Object.entries(speakerSections)) {
+						const sectionSpeakerLower = sectionSpeaker.toLowerCase().trim();
+						if (
+							sectionSpeakerLower === gradeSpeaker ||
+							sectionSpeakerLower.includes(gradeSpeaker) ||
+							gradeSpeaker.includes(sectionSpeakerLower) ||
+							sectionSpeakerLower.replace(/[^\w\s]/g, '') === gradeSpeaker.replace(/[^\w\s]/g, '')
+						) {
+							speakerText = text;
+							console.log(`Flexible match found: "${grade.speaker}" -> "${sectionSpeaker}"`);
+							break;
+						}
+					}
+					if (!speakerText) {
+						console.log(`No match found for speaker: "${grade.speaker}"`);
+					}
+				}
+				
 				const fillerCount = countFillerWords(speakerText);
-				const wordCount = speakerText.split(/\s+/).length;
-				const fillerScore = calculateFillerWordScore(fillerCount, wordCount);
+				const wordCount = speakerText.split(/\s+/).filter(word => word.length > 0).length;
+				const fillerScore = wordCount > 0 ? calculateFillerWordScore(fillerCount, wordCount) : 'N/A';
 
 				return {
 					...grade,
@@ -299,28 +343,34 @@ Provide detailed, actionable coaching feedback. Be specific about what each pers
 		let currentText = '';
 
 		for (const line of lines) {
-			// Look for speaker indicators (Speaker:, Name:, etc.)
-			const speakerMatch = line.match(/^([A-Za-z0-9\s]+?):\s*(.*)$/);
+			// Look for speaker indicators (Speaker:, Name:, etc.) - more flexible patterns
+			const speakerMatch = line.match(/^([A-Za-z0-9\s]+?):\s*(.*)$/) || 
+							   line.match(/^([A-Za-z0-9\s]+?)\s*-\s*(.*)$/) ||
+							   line.match(/^\[([A-Za-z0-9\s]+?)\]\s*(.*)$/);
 			
 			if (speakerMatch) {
 				// Save previous speaker's text
-				if (currentSpeaker && currentText) {
-					sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText;
+				if (currentSpeaker && currentText.trim()) {
+					sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText.trim();
 				}
 				
 				// Start new speaker
 				currentSpeaker = speakerMatch[1].trim();
 				currentText = speakerMatch[2];
-			} else if (currentSpeaker) {
-				// Continue with current speaker
-				currentText += ' ' + line;
+			} else if (currentSpeaker && line.trim()) {
+				// Continue with current speaker if line has content
+				currentText += ' ' + line.trim();
 			}
 		}
 
 		// Save last speaker
-		if (currentSpeaker && currentText) {
-			sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText;
+		if (currentSpeaker && currentText.trim()) {
+			sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText.trim();
 		}
+
+		// Debug logging
+		console.log('Extracted speaker sections:', sections);
+		console.log('Speaker names:', Object.keys(sections));
 
 		return sections;
 	}
