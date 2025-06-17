@@ -19,6 +19,7 @@
 		paceGrade: string;
 		fillerWordCount: number;
 		fillerWordScore: string;
+		fillerWordRatio: string;
 		keyInsights: string[];
 	}
 
@@ -156,8 +157,7 @@
 		}
 		
 		// Debug logging
-		console.log(`Filler word count for text (${text.split(/\s+/).length} words):`, count);
-		console.log('Text sample:', text.substring(0, 100) + '...');
+		console.log(`Filler words found: ${count} out of ${text.split(/\s+/).length} words`);
 		
 		return count;
 	}
@@ -243,19 +243,147 @@
 		isAnalyzing = true;
 
 		try {
+			// Step 1: Parse transcript into structured speaker data
+			console.log('Step 1: Parsing transcript structure...');
+			const structuredData = await parseTranscriptStructure(transcriptInput);
+			console.log('Parsed speaker data:', structuredData);
+
+			// Step 2: Analyze filler words for each speaker
+			console.log('Step 2: Analyzing filler words...');
+			const speakersWithFillers = analyzeFillerWords(structuredData.speakers);
+			console.log('Filler word analysis:', speakersWithFillers);
+
+			// Step 3: Generate coaching report card
+			console.log('Step 3: Generating coaching report...');
+			const coachingReport = await generateCoachingReport(structuredData, speakersWithFillers);
+
 			// Generate conversation name
 			const conversationName = extractConversationName(transcriptInput);
 
-			const analysisPrompt = `You are an expert communication coach analyzing a meeting transcript. Provide a comprehensive coaching report card using the EXACT grading rubric below.
+			// Create coaching report
+			const report: CoachingReport = {
+				id: `meeting-coach-report-${Date.now()}`,
+				timestamp: new Date().toISOString(),
+				transcript: transcriptInput,
+				conversationName: conversationName,
+				speakerGrades: coachingReport.speakerGrades,
+				generalInsights: coachingReport.generalInsights,
+				keyTakeaways: coachingReport.keyTakeaways,
+				improvementAreas: coachingReport.improvementAreas,
+				fullReport: generateFullReport(coachingReport, coachingReport.speakerGrades, conversationName)
+			};
 
-TRANSCRIPT TO ANALYZE:
-${transcriptInput}
+			currentReport = report;
+
+			// Save to localStorage
+			localStorage.setItem(report.id, JSON.stringify(report));
+			loadHistoricalReports();
+
+		} catch (error) {
+			console.error('Analysis failed:', error);
+			alert('Failed to analyze transcript. Please try again.');
+		} finally {
+			isAnalyzing = false;
+		}
+	}
+
+	async function parseTranscriptStructure(transcript: string) {
+		const parsePrompt = `Parse this meeting transcript and extract speaker dialogue into a structured format. Identify who is speaking and what they said.
+
+TRANSCRIPT:
+${transcript}
+
+Extract all speakers and their dialogue. Clean up the text and organize it properly.`;
+
+		const response = await fetch('/api/flash', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				prompt: parsePrompt,
+				schema: {
+					type: 'object',
+					properties: {
+						speakers: {
+							type: 'object',
+							description: 'Object with speaker names as keys and their dialogue as values',
+							additionalProperties: {
+								type: 'object',
+								properties: {
+									name: {
+										type: 'string',
+										description: 'Speaker name or identifier'
+									},
+									dialogue: {
+										type: 'string',
+										description: 'All text spoken by this speaker, combined into one string'
+									},
+									wordCount: {
+										type: 'number',
+										description: 'Approximate number of words spoken'
+									}
+								},
+								required: ['name', 'dialogue', 'wordCount']
+							}
+						},
+						totalSpeakers: {
+							type: 'number',
+							description: 'Total number of speakers identified'
+						},
+						meetingTopic: {
+							type: 'string',
+							description: 'Brief description of the meeting topic or purpose'
+						}
+					},
+					required: ['speakers', 'totalSpeakers']
+				}
+			})
+		});
+
+		const result = await response.json();
+		if (result.error) {
+			throw new Error(result.error);
+		}
+
+		return JSON.parse(result.text);
+	}
+
+	function analyzeFillerWords(speakers: any) {
+		const speakersWithFillers: any = {};
+
+		for (const [speakerId, speakerData] of Object.entries(speakers)) {
+			const speaker = speakerData as any;
+			const fillerCount = countFillerWords(speaker.dialogue);
+			const fillerScore = speaker.wordCount > 0 ? calculateFillerWordScore(fillerCount, speaker.wordCount) : 'N/A';
+
+			speakersWithFillers[speakerId] = {
+				...speaker,
+				fillerWordCount: fillerCount,
+				fillerWordScore: fillerScore,
+				fillerWordRatio: speaker.wordCount > 0 ? ((fillerCount / speaker.wordCount) * 100).toFixed(1) : '0'
+			};
+
+			console.log(`${speaker.name}: ${speaker.wordCount} words, ${fillerCount} fillers (${speakersWithFillers[speakerId].fillerWordRatio}%)`);
+		}
+
+		return speakersWithFillers;
+	}
+
+	async function generateCoachingReport(structuredData: any, speakersWithFillers: any) {
+		// Create a summary of the structured data for context
+		const speakerSummary = Object.values(speakersWithFillers).map((speaker: any) => 
+			`${speaker.name}: ${speaker.wordCount} words, ${speaker.fillerWordCount} fillers (${speaker.fillerWordRatio}%)`
+		).join('; ');
+
+		const analysisPrompt = `You are an expert communication coach analyzing a meeting transcript. The transcript has been pre-processed and structured. Here's the speaker breakdown: ${speakerSummary}
+
+STRUCTURED SPEAKER DATA:
+${JSON.stringify(speakersWithFillers, null, 2)}
 
 ANALYSIS REQUIREMENTS:
 
-1. IDENTIFY SPEAKERS: Parse who is speaking in the conversation (look for patterns like "Speaker 1:", "John:", etc. or infer from context)
-
-2. GRADE EACH SPEAKER using this EXACT RUBRIC (A-F):
+1. GRADE EACH SPEAKER using this EXACT RUBRIC (A-F):
 
 **CLARITY RUBRIC:**
 - A: Clear pronunciation, no mumbling, easy to understand, well-articulated
@@ -292,22 +420,16 @@ ANALYSIS REQUIREMENTS:
 - D: Weak arguments, little evidence, not convincing
 - F: No persuasive elements, unclear or unconvincing points
 
-3. CALCULATE QUANTITATIVE METRICS:
-- Count approximate words spoken by each speaker
-- Estimate speaking time percentage for each speaker
-- Note speaking pace (fast/normal/slow) based on word density
+2. CALCULATE QUANTITATIVE METRICS:
+- Estimate speaking time percentage for each speaker based on word count
+- Note speaking pace (fast/normal/slow) based on content analysis
 
-4. PROVIDE COACHING INSIGHTS for each speaker including:
+3. PROVIDE COACHING INSIGHTS for each speaker including:
 - Specific strengths demonstrated
 - Areas for improvement
 - Communication patterns observed
 
-5. OVERALL MEETING ANALYSIS:
-- General insights about the conversation dynamics
-- Key takeaways for improving future meetings
-- Specific improvement areas for the group
-
-CRITICAL: Use the EXACT rubric above. Do not deviate from these grading criteria. Be consistent and deterministic.
+CRITICAL: Use the EXACT rubric above. Be consistent and deterministic. Filler word data is already calculated.
 
 Return your analysis in the following JSON format:
 {
@@ -333,165 +455,57 @@ Return your analysis in the following JSON format:
   "improvementAreas": ["area 1", "area 2", ...]
 }
 
-Provide detailed, actionable coaching feedback based strictly on the rubric above.`;
+Base your grades strictly on the content analysis of each speaker's dialogue.`;
 
-			const response = await fetch('/api/pro', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ prompt: analysisPrompt })
-			});
+		const response = await fetch('/api/pro', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ prompt: analysisPrompt })
+		});
 
-			const result = await response.json();
+		const result = await response.json();
+		if (result.error) {
+			throw new Error(result.error);
+		}
 
-			if (result.error) {
-				throw new Error(result.error);
-			}
+		const analysisData = JSON.parse(result.text);
 
-			// Parse the AI response
-			let analysisData;
-			try {
-				analysisData = JSON.parse(result.text);
-			} catch (parseError) {
-				console.error('Error parsing analysis:', parseError);
-				throw new Error('Failed to parse coaching analysis');
-			}
+		// Merge the filler word analysis with the coaching grades
+		const enhancedGrades = analysisData.speakerGrades.map((grade: any) => {
+			// Find matching speaker from filler analysis
+			const matchingSpeaker = Object.values(speakersWithFillers).find((speaker: any) => 
+				speaker.name.toLowerCase().includes(grade.speaker.toLowerCase()) || 
+				grade.speaker.toLowerCase().includes(speaker.name.toLowerCase())
+			) as any;
 
-			// Process speaker sections and count filler words
-			const speakerSections = extractSpeakerSections(transcriptInput);
-			console.log('AI returned speakers:', analysisData.speakerGrades.map((g: any) => g.speaker));
-			
-			const processedGrades = analysisData.speakerGrades.map((grade: any) => {
-				// Try to find matching speaker text with flexible matching
-				let speakerText = '';
-				const gradeSpeaker = grade.speaker.toLowerCase().trim();
-				
-				// Try exact match first
-				if (speakerSections[grade.speaker]) {
-					speakerText = speakerSections[grade.speaker];
-					console.log(`Exact match found for "${grade.speaker}"`);
-				} else {
-					// Try flexible matching
-					for (const [sectionSpeaker, text] of Object.entries(speakerSections)) {
-						const sectionSpeakerLower = sectionSpeaker.toLowerCase().trim();
-						if (
-							sectionSpeakerLower === gradeSpeaker ||
-							sectionSpeakerLower.includes(gradeSpeaker) ||
-							gradeSpeaker.includes(sectionSpeakerLower) ||
-							sectionSpeakerLower.replace(/[^\w\s]/g, '') === gradeSpeaker.replace(/[^\w\s]/g, '') ||
-							// Try partial matching for cases like "Speaker 1" vs "Speaker1"
-							sectionSpeakerLower.replace(/\s+/g, '') === gradeSpeaker.replace(/\s+/g, '') ||
-							// Try matching just the name part
-							sectionSpeakerLower.split(' ')[0] === gradeSpeaker.split(' ')[0]
-						) {
-							speakerText = text;
-							console.log(`Flexible match found: "${grade.speaker}" -> "${sectionSpeaker}"`);
-							break;
-						}
-					}
-					if (!speakerText) {
-						console.log(`No match found for speaker: "${grade.speaker}"`);
-						console.log('Available speakers:', Object.keys(speakerSections));
-						// Try one more fuzzy match - look for any speaker containing digits if grade speaker has digits
-						const gradeHasDigits = /\d/.test(gradeSpeaker);
-						if (gradeHasDigits) {
-							for (const [sectionSpeaker, text] of Object.entries(speakerSections)) {
-								if (/\d/.test(sectionSpeaker.toLowerCase())) {
-									speakerText = text;
-									console.log(`Digit-based match found: "${grade.speaker}" -> "${sectionSpeaker}"`);
-									break;
-								}
-							}
-						}
-					}
-				}
-				
-				// Calculate filler words
-				const fillerCount = countFillerWords(speakerText);
-				const actualWordCount = speakerText ? speakerText.split(/\s+/).filter(word => word.length > 0).length : 0;
-				const fillerScore = actualWordCount > 0 ? calculateFillerWordScore(fillerCount, actualWordCount) : 'N/A';
-				
-				// Calculate pace grade based on speaking time percentage and pace
+			if (matchingSpeaker) {
+				// Calculate pace grade
 				const paceGrade = calculatePaceGrade(grade.speakingTimePercentage, grade.pace);
-
-				console.log(`Speaker "${grade.speaker}": ${actualWordCount} words, ${fillerCount} fillers, score: ${fillerScore}`);
 
 				return {
 					...grade,
 					paceGrade: paceGrade,
-					fillerWordCount: fillerCount,
-					fillerWordScore: fillerScore
+					fillerWordCount: matchingSpeaker.fillerWordCount,
+					fillerWordScore: matchingSpeaker.fillerWordScore,
+					fillerWordRatio: matchingSpeaker.fillerWordRatio
 				};
-			});
-
-			// Generate full report for display
-			const fullReport = generateFullReport(analysisData, processedGrades, conversationName);
-
-			// Create coaching report
-			const report: CoachingReport = {
-				id: `meeting-coach-report-${Date.now()}`,
-				timestamp: new Date().toISOString(),
-				transcript: transcriptInput,
-				conversationName: conversationName,
-				speakerGrades: processedGrades,
-				generalInsights: analysisData.generalInsights,
-				keyTakeaways: analysisData.keyTakeaways,
-				improvementAreas: analysisData.improvementAreas,
-				fullReport: fullReport
-			};
-
-			currentReport = report;
-
-			// Save to localStorage
-			localStorage.setItem(report.id, JSON.stringify(report));
-			loadHistoricalReports();
-
-		} catch (error) {
-			console.error('Analysis failed:', error);
-			alert('Failed to analyze transcript. Please try again.');
-		} finally {
-			isAnalyzing = false;
-		}
-	}
-
-	function extractSpeakerSections(transcript: string): Record<string, string> {
-		const sections: Record<string, string> = {};
-		const lines = transcript.split('\n');
-		let currentSpeaker = '';
-		let currentText = '';
-
-		for (const line of lines) {
-			// Look for speaker indicators (Speaker:, Name:, etc.) - more flexible patterns
-			const speakerMatch = line.match(/^([A-Za-z0-9\s]+?):\s*(.*)$/) || 
-							   line.match(/^([A-Za-z0-9\s]+?)\s*-\s*(.*)$/) ||
-							   line.match(/^\[([A-Za-z0-9\s]+?)\]\s*(.*)$/);
-			
-			if (speakerMatch) {
-				// Save previous speaker's text
-				if (currentSpeaker && currentText.trim()) {
-					sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText.trim();
-				}
-				
-				// Start new speaker
-				currentSpeaker = speakerMatch[1].trim();
-				currentText = speakerMatch[2];
-			} else if (currentSpeaker && line.trim()) {
-				// Continue with current speaker if line has content
-				currentText += ' ' + line.trim();
 			}
-		}
 
-		// Save last speaker
-		if (currentSpeaker && currentText.trim()) {
-			sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText.trim();
-		}
+			return {
+				...grade,
+				paceGrade: 'N/A',
+				fillerWordCount: 0,
+				fillerWordScore: 'N/A',
+				fillerWordRatio: '0'
+			};
+		});
 
-		// Debug logging
-		console.log('Extracted speaker sections:', sections);
-		console.log('Speaker names:', Object.keys(sections));
-
-		return sections;
+		return {
+			...analysisData,
+			speakerGrades: enhancedGrades
+		};
 	}
 
 	function generateFullReport(analysisData: any, speakerGrades: SpeakerGrade[], conversationName: string): string {
@@ -522,10 +536,7 @@ Provide detailed, actionable coaching feedback based strictly on the rubric abov
 			report += `**Filler Word Analysis:**\n`;
 			report += `- Filler Word Count: ${speaker.fillerWordCount}\n`;
 			report += `- Filler Word Score: ${speaker.fillerWordScore}\n`;
-			if (speaker.wordCount && speaker.fillerWordCount > 0) {
-				const ratio = ((speaker.fillerWordCount / speaker.wordCount) * 100).toFixed(1);
-				report += `- Filler Word Ratio: ${ratio}% of total words\n`;
-			}
+			report += `- Filler Word Ratio: ${speaker.fillerWordRatio}% of total words\n`;
 			report += `\n`;
 			
 			report += `**Key Insights:**\n`;
