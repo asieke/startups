@@ -293,60 +293,122 @@
 TRANSCRIPT:
 ${transcript}
 
-Extract all speakers and their dialogue. Clean up the text and organize it properly.`;
+Extract all speakers and their dialogue. Clean up the text and organize it properly. Return the data in the exact JSON format specified in the schema.`;
 
-		const response = await fetch('/api/flash', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				prompt: parsePrompt,
-				schema: {
-					type: 'object',
-					properties: {
-						speakers: {
-							type: 'object',
-							description: 'Object with speaker names as keys and their dialogue as values',
-							additionalProperties: {
+		try {
+			// Try flash endpoint first
+			const response = await fetch('/api/flash', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					prompt: parsePrompt,
+					schema: {
+						type: 'object',
+						properties: {
+							speakers: {
 								type: 'object',
-								properties: {
-									name: {
-										type: 'string',
-										description: 'Speaker name or identifier'
-									},
-									dialogue: {
-										type: 'string',
-										description: 'All text spoken by this speaker, combined into one string'
-									},
-									wordCount: {
-										type: 'number',
-										description: 'Approximate number of words spoken'
-									}
-								},
-								required: ['name', 'dialogue', 'wordCount']
+								description: 'Object with speaker names as keys and their dialogue as values'
+							},
+							totalSpeakers: {
+								type: 'number',
+								description: 'Total number of speakers identified'
+							},
+							meetingTopic: {
+								type: 'string',
+								description: 'Brief description of the meeting topic or purpose'
 							}
 						},
-						totalSpeakers: {
-							type: 'number',
-							description: 'Total number of speakers identified'
-						},
-						meetingTopic: {
-							type: 'string',
-							description: 'Brief description of the meeting topic or purpose'
-						}
-					},
-					required: ['speakers', 'totalSpeakers']
-				}
-			})
-		});
+						required: ['speakers', 'totalSpeakers']
+					}
+				})
+			});
 
-		const result = await response.json();
-		if (result.error) {
-			throw new Error(result.error);
+			const result = await response.json();
+			if (result.error) {
+				console.error('Flash API error:', result);
+				throw new Error(result.error);
+			}
+
+			const parsedData = JSON.parse(result.text);
+			
+			// Transform the speakers object to include structured data
+			const structuredSpeakers: any = {};
+			for (const [speakerId, dialogue] of Object.entries(parsedData.speakers)) {
+				const dialogueText = dialogue as string;
+				const wordCount = dialogueText.split(/\s+/).filter(word => word.length > 0).length;
+				
+				structuredSpeakers[speakerId] = {
+					name: speakerId,
+					dialogue: dialogueText,
+					wordCount: wordCount
+				};
+			}
+
+			return {
+				speakers: structuredSpeakers,
+				totalSpeakers: parsedData.totalSpeakers,
+				meetingTopic: parsedData.meetingTopic || 'Meeting Discussion'
+			};
+
+		} catch (error) {
+			console.warn('Flash endpoint failed, falling back to pro endpoint:', error);
+			
+			// Fallback to pro endpoint
+			const fallbackPrompt = `Parse this meeting transcript and extract speaker dialogue into a structured JSON format.
+
+TRANSCRIPT:
+${transcript}
+
+Return a JSON object with this exact structure:
+{
+  "speakers": {
+    "Speaker1": "all text spoken by speaker 1",
+    "Speaker2": "all text spoken by speaker 2"
+  },
+  "totalSpeakers": 2,
+  "meetingTopic": "brief topic description"
+}
+
+Parse all speakers and combine their dialogue into single strings.`;
+
+			const fallbackResponse = await fetch('/api/pro', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					prompt: fallbackPrompt
+				})
+			});
+
+			const fallbackResult = await fallbackResponse.json();
+			if (fallbackResult.error) {
+				throw new Error(fallbackResult.error);
+			}
+
+			const parsedData = JSON.parse(fallbackResult.text);
+			
+			// Transform the speakers object to include structured data
+			const structuredSpeakers: any = {};
+			for (const [speakerId, dialogue] of Object.entries(parsedData.speakers)) {
+				const dialogueText = dialogue as string;
+				const wordCount = dialogueText.split(/\s+/).filter(word => word.length > 0).length;
+				
+				structuredSpeakers[speakerId] = {
+					name: speakerId,
+					dialogue: dialogueText,
+					wordCount: wordCount
+				};
+			}
+
+			return {
+				speakers: structuredSpeakers,
+				totalSpeakers: parsedData.totalSpeakers,
+				meetingTopic: parsedData.meetingTopic || 'Meeting Discussion'
+			};
 		}
-
-		return JSON.parse(result.text);
 	}
 
 	function analyzeFillerWords(speakers: any) {
