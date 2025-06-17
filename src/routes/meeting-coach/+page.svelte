@@ -421,32 +421,32 @@ Provide detailed, actionable coaching feedback. Be specific about what each pers
 							</div>
 						{:else}
 							{#each historicalReports as report}
-								<button
-									onclick={() => selectReport(report)}
-									class="w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 {selectedReport?.id ===
-									report.id
-										? 'border-orange-200 bg-orange-50'
-										: ''}"
-								>
-									<div class="truncate text-sm font-medium text-gray-900">
-										{report.conversationName}
-									</div>
-									<div class="mt-1 text-xs text-gray-500">
-										{formatDate(report.timestamp)}
-									</div>
-									<div class="mt-1 flex space-x-2">
-										<span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-											{report.speakerGrades.length} speaker{report.speakerGrades.length === 1 ? '' : 's'}
-										</span>
-									</div>
-									<!-- svelte-ignore a11y_consider_explicit_label -->
+								<div class="border-b border-gray-100 {selectedReport?.id === report.id ? 'border-orange-200 bg-orange-50' : ''}">
 									<button
-										onclick={(event) => deleteReport(report.id, event)}
-										class="mt-2 rounded bg-red-100 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-200"
+										onclick={() => selectReport(report)}
+										class="w-full p-4 text-left transition-colors hover:bg-gray-50"
 									>
-										Delete
+										<div class="truncate text-sm font-medium text-gray-900">
+											{report.conversationName}
+										</div>
+										<div class="mt-1 text-xs text-gray-500">
+											{formatDate(report.timestamp)}
+										</div>
+										<div class="mt-1 flex space-x-2">
+											<span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+												{report.speakerGrades.length} speaker{report.speakerGrades.length === 1 ? '' : 's'}
+											</span>
+										</div>
 									</button>
-								</button>
+									<div class="px-4 pb-2">
+										<button
+											onclick={(event) => deleteReport(report.id, event)}
+											class="rounded bg-red-100 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-200"
+										>
+											Delete
+										</button>
+									</div>
+								</div>
 							{/each}
 						{/if}
 					</div>
