@@ -8,7 +8,7 @@
 	</div>
 
 	<!-- Action Cards -->
-	<div class="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
+	<div class="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-5">
 		<!-- Search Card -->
 		<a
 			href="/search"
@@ -142,7 +142,7 @@
 						stroke-linecap="round"
 						stroke-linejoin="round"
 						stroke-width="2"
-						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002 2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 					></path>
 				</svg>
 			</div>
@@ -157,6 +157,46 @@
 			</p>
 			<div class="flex items-center font-semibold text-purple-600 group-hover:text-purple-700">
 				Explore Markets
+				<svg
+					class="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+					></path>
+				</svg>
+			</div>
+		</a>
+
+		<!-- Meeting Coach Card -->
+		<a
+			href="/meeting-coach"
+			class="group block rounded-2xl border border-gray-200 bg-white p-8 shadow-lg transition-all duration-300 hover:border-orange-300 hover:shadow-xl"
+		>
+			<div
+				class="mb-6 flex h-16 w-16 items-center justify-center rounded-xl bg-orange-100 transition-colors group-hover:bg-orange-200"
+			>
+				<svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+					></path>
+				</svg>
+			</div>
+			<h3
+				class="mb-4 text-2xl font-bold text-gray-900 transition-colors group-hover:text-orange-600"
+			>
+				Meeting Coach
+			</h3>
+			<p class="mb-6 text-gray-600">
+				Upload call transcripts and get personalized coaching reports. Analyze speaking patterns, 
+				filler words, and conversation effectiveness with AI-powered insights.
+			</p>
+			<div class="flex items-center font-semibold text-orange-600 group-hover:text-orange-700">
+				Start Coaching
 				<svg
 					class="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1"
 					fill="none"

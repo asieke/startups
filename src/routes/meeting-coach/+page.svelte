@@ -1,0 +1,666 @@
+<script lang="ts">
+	import Button from '$lib/components/Button.svelte';
+	import { marked } from 'marked';
+	import { onMount } from 'svelte';
+
+	// Type definitions
+	interface SpeakerGrade {
+		speaker: string;
+		grades: {
+			clarity: string;
+			engagement: string;
+			professionalism: string;
+			structure: string;
+			persuasiveness: string;
+		};
+		overallGrade: string;
+		fillerWordCount: number;
+		fillerWordScore: string;
+		keyInsights: string[];
+	}
+
+	interface CoachingReport {
+		id: string;
+		timestamp: string;
+		transcript: string;
+		conversationName: string;
+		speakerGrades: SpeakerGrade[];
+		generalInsights: string;
+		keyTakeaways: string[];
+		improvementAreas: string[];
+		fullReport: string;
+	}
+
+	// State
+	let transcriptInput = $state('');
+	let isAnalyzing = $state(false);
+	let currentReport = $state<CoachingReport | null>(null);
+	let historicalReports = $state<CoachingReport[]>([]);
+	let selectedReport = $state<CoachingReport | null>(null);
+	let showSidebar = $state(true);
+
+	// Filler words list for counting
+	const fillerWords = [
+		'um', 'uh', 'ah', 'er', 'like', 'you know', 'actually', 'basically', 'literally', 'so',
+		'well', 'right', 'okay', 'alright', 'hmm', 'mmm', 'yeah', 'yep', 'sure', 'totally',
+		'absolutely', 'definitely', 'obviously', 'clearly', 'honestly', 'frankly', 'really',
+		'quite', 'pretty', 'very', 'sort of', 'kind of', 'I mean', 'you see', 'you get'
+	];
+
+	// Initialize
+	onMount(() => {
+		loadHistoricalReports();
+	});
+
+	function loadHistoricalReports() {
+		const reports: CoachingReport[] = [];
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (key?.startsWith('meeting-coach-report-')) {
+				try {
+					const data = JSON.parse(localStorage.getItem(key) || '');
+					reports.push({
+						id: key,
+						...data
+					});
+				} catch (e) {
+					console.error('Error parsing report:', e);
+				}
+			}
+		}
+		// Sort by timestamp, newest first
+		historicalReports = reports.sort(
+			(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+		);
+	}
+
+	function startNewAnalysis() {
+		selectedReport = null;
+		currentReport = null;
+		transcriptInput = '';
+		isAnalyzing = false;
+	}
+
+	function selectReport(report: CoachingReport) {
+		selectedReport = report;
+		currentReport = report;
+	}
+
+	function deleteReport(reportId: string, event: Event) {
+		event.stopPropagation();
+
+		if (
+			confirm('Are you sure you want to delete this coaching report? This action cannot be undone.')
+		) {
+			localStorage.removeItem(reportId);
+
+			if (selectedReport?.id === reportId) {
+				selectedReport = null;
+				currentReport = null;
+			}
+
+			loadHistoricalReports();
+		}
+	}
+
+	function countFillerWords(text: string): number {
+		const words = text.toLowerCase().split(/\s+/);
+		let count = 0;
+		
+		for (const word of words) {
+			const cleanWord = word.replace(/[^\w\s]/g, '');
+			if (fillerWords.includes(cleanWord)) {
+				count++;
+			}
+		}
+		
+		// Check for multi-word filler phrases
+		const textLower = text.toLowerCase();
+		const multiWordFillers = ['you know', 'i mean', 'you see', 'you get', 'sort of', 'kind of'];
+		for (const phrase of multiWordFillers) {
+			const matches = textLower.match(new RegExp(phrase, 'g'));
+			if (matches) {
+				count += matches.length;
+			}
+		}
+		
+		return count;
+	}
+
+	function calculateFillerWordScore(fillerCount: number, wordCount: number): string {
+		const ratio = fillerCount / wordCount;
+		if (ratio < 0.02) return 'A';
+		if (ratio < 0.04) return 'B';
+		if (ratio < 0.06) return 'C';
+		if (ratio < 0.08) return 'D';
+		return 'F';
+	}
+
+	function extractConversationName(transcript: string): string {
+		// Try to identify the main topic or purpose from the transcript
+		const lines = transcript.split('\n').slice(0, 10); // First 10 lines
+		const words = transcript.split(' ').slice(0, 100); // First 100 words
+		
+		// Look for common meeting indicators
+		const meetingKeywords = [
+			'meeting', 'call', 'discussion', 'interview', 'presentation', 'pitch',
+			'standup', 'review', 'planning', 'sync', 'demo', 'client', 'sales'
+		];
+		
+		for (const line of lines) {
+			for (const keyword of meetingKeywords) {
+				if (line.toLowerCase().includes(keyword)) {
+					// Extract a short phrase around the keyword
+					const wordIndex = line.toLowerCase().indexOf(keyword);
+					const start = Math.max(0, wordIndex - 20);
+					const end = Math.min(line.length, wordIndex + 50);
+					const phrase = line.substring(start, end).trim();
+					return phrase || `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} Discussion`;
+				}
+			}
+		}
+		
+		// Fallback: use first few words or current date
+		const firstWords = words.slice(0, 8).join(' ');
+		return firstWords || `Meeting - ${new Date().toLocaleDateString()}`;
+	}
+
+	async function analyzeTranscript() {
+		if (!transcriptInput.trim() || isAnalyzing) return;
+
+		isAnalyzing = true;
+
+		try {
+			// Generate conversation name
+			const conversationName = extractConversationName(transcriptInput);
+
+			const analysisPrompt = `You are an expert communication coach analyzing a meeting transcript. Provide a comprehensive coaching report card.
+
+TRANSCRIPT TO ANALYZE:
+${transcriptInput}
+
+ANALYSIS REQUIREMENTS:
+
+1. IDENTIFY SPEAKERS: Parse who is speaking in the conversation (look for patterns like "Speaker 1:", "John:", etc. or infer from context)
+
+2. GRADE EACH SPEAKER (A-F) on these dimensions:
+   - Clarity: How clear and articulate they were
+   - Engagement: How well they engaged with others and the topic
+   - Professionalism: Professional communication style and tone
+   - Structure: How well they organized their thoughts and contributions
+   - Persuasiveness: How effectively they communicated their points
+
+3. FILLER WORD ANALYSIS: I will separately count filler words, but note any patterns you observe.
+
+4. PROVIDE COACHING INSIGHTS for each speaker including:
+   - Specific strengths demonstrated
+   - Areas for improvement
+   - Communication patterns observed
+
+5. OVERALL MEETING ANALYSIS:
+   - General insights about the conversation dynamics
+   - Key takeaways for improving future meetings
+   - Specific improvement areas for the group
+
+Return your analysis in the following JSON format:
+{
+  "speakerGrades": [
+    {
+      "speaker": "Speaker Name/ID",
+      "grades": {
+        "clarity": "A-F",
+        "engagement": "A-F", 
+        "professionalism": "A-F",
+        "structure": "A-F",
+        "persuasiveness": "A-F"
+      },
+      "overallGrade": "A-F",
+      "keyInsights": ["insight 1", "insight 2", ...]
+    }
+  ],
+  "generalInsights": "Overall analysis paragraph",
+  "keyTakeaways": ["takeaway 1", "takeaway 2", ...],
+  "improvementAreas": ["area 1", "area 2", ...]
+}
+
+Provide detailed, actionable coaching feedback. Be specific about what each person did well and what they can improve.`;
+
+			const response = await fetch('/api/pro', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ prompt: analysisPrompt })
+			});
+
+			const result = await response.json();
+
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
+			// Parse the AI response
+			let analysisData;
+			try {
+				analysisData = JSON.parse(result.text);
+			} catch (parseError) {
+				console.error('Error parsing analysis:', parseError);
+				throw new Error('Failed to parse coaching analysis');
+			}
+
+			// Process speaker sections and count filler words
+			const speakerSections = extractSpeakerSections(transcriptInput);
+			const processedGrades = analysisData.speakerGrades.map((grade: any) => {
+				const speakerText = speakerSections[grade.speaker] || '';
+				const fillerCount = countFillerWords(speakerText);
+				const wordCount = speakerText.split(/\s+/).length;
+				const fillerScore = calculateFillerWordScore(fillerCount, wordCount);
+
+				return {
+					...grade,
+					fillerWordCount: fillerCount,
+					fillerWordScore: fillerScore
+				};
+			});
+
+			// Generate full report for display
+			const fullReport = generateFullReport(analysisData, processedGrades, conversationName);
+
+			// Create coaching report
+			const report: CoachingReport = {
+				id: `meeting-coach-report-${Date.now()}`,
+				timestamp: new Date().toISOString(),
+				transcript: transcriptInput,
+				conversationName: conversationName,
+				speakerGrades: processedGrades,
+				generalInsights: analysisData.generalInsights,
+				keyTakeaways: analysisData.keyTakeaways,
+				improvementAreas: analysisData.improvementAreas,
+				fullReport: fullReport
+			};
+
+			currentReport = report;
+
+			// Save to localStorage
+			localStorage.setItem(report.id, JSON.stringify(report));
+			loadHistoricalReports();
+
+		} catch (error) {
+			console.error('Analysis failed:', error);
+			alert('Failed to analyze transcript. Please try again.');
+		} finally {
+			isAnalyzing = false;
+		}
+	}
+
+	function extractSpeakerSections(transcript: string): Record<string, string> {
+		const sections: Record<string, string> = {};
+		const lines = transcript.split('\n');
+		let currentSpeaker = '';
+		let currentText = '';
+
+		for (const line of lines) {
+			// Look for speaker indicators (Speaker:, Name:, etc.)
+			const speakerMatch = line.match(/^([A-Za-z0-9\s]+?):\s*(.*)$/);
+			
+			if (speakerMatch) {
+				// Save previous speaker's text
+				if (currentSpeaker && currentText) {
+					sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText;
+				}
+				
+				// Start new speaker
+				currentSpeaker = speakerMatch[1].trim();
+				currentText = speakerMatch[2];
+			} else if (currentSpeaker) {
+				// Continue with current speaker
+				currentText += ' ' + line;
+			}
+		}
+
+		// Save last speaker
+		if (currentSpeaker && currentText) {
+			sections[currentSpeaker] = (sections[currentSpeaker] || '') + ' ' + currentText;
+		}
+
+		return sections;
+	}
+
+	function generateFullReport(analysisData: any, speakerGrades: SpeakerGrade[], conversationName: string): string {
+		let report = `# Meeting Coaching Report: ${conversationName}\n\n`;
+		report += `**Date:** ${new Date().toLocaleDateString()}\n\n`;
+
+		report += `## Executive Summary\n\n${analysisData.generalInsights}\n\n`;
+
+		report += `## Individual Speaker Analysis\n\n`;
+
+		for (const speaker of speakerGrades) {
+			report += `### ${speaker.speaker}\n\n`;
+			report += `**Overall Grade: ${speaker.overallGrade}**\n\n`;
+			
+			report += `**Performance Breakdown:**\n`;
+			report += `- Clarity: ${speaker.grades.clarity}\n`;
+			report += `- Engagement: ${speaker.grades.engagement}\n`;
+			report += `- Professionalism: ${speaker.grades.professionalism}\n`;
+			report += `- Structure: ${speaker.grades.structure}\n`;
+			report += `- Persuasiveness: ${speaker.grades.persuasiveness}\n\n`;
+			
+			report += `**Filler Word Analysis:**\n`;
+			report += `- Count: ${speaker.fillerWordCount}\n`;
+			report += `- Score: ${speaker.fillerWordScore}\n\n`;
+			
+			report += `**Key Insights:**\n`;
+			for (const insight of speaker.keyInsights) {
+				report += `- ${insight}\n`;
+			}
+			report += `\n`;
+		}
+
+		report += `## Key Takeaways\n\n`;
+		for (const takeaway of analysisData.keyTakeaways) {
+			report += `- ${takeaway}\n`;
+		}
+
+		report += `\n## Areas for Improvement\n\n`;
+		for (const area of analysisData.improvementAreas) {
+			report += `- ${area}\n`;
+		}
+
+		return report;
+	}
+
+	function formatDate(timestamp: string): string {
+		return new Date(timestamp).toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' && event.ctrlKey) {
+			event.preventDefault();
+			analyzeTranscript();
+		}
+	}
+
+	// Convert markdown to HTML
+	function renderMarkdown(text: string): string {
+		try {
+			const result = marked(text);
+			if (typeof result === 'string') {
+				return result;
+			} else {
+				console.warn('Marked returned a Promise, using original text');
+				return text;
+			}
+		} catch (e) {
+			console.error('Error rendering markdown:', e);
+			return text;
+		}
+	}
+
+	let isAnalyzeDisabled = $derived(transcriptInput.trim().length === 0 || isAnalyzing);
+</script>
+
+<!-- Main Container with proper spacing like other pages -->
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+	<!-- Main Content Layout -->
+	<div class="flex h-[calc(100vh-8rem)] gap-8">
+		<!-- Sidebar for Historical Reports -->
+		{#if showSidebar}
+			<div class="w-80 flex-shrink-0">
+				<div class="h-full rounded-lg border border-gray-200 bg-white shadow-sm">
+					<div class="border-b border-gray-200 p-4">
+						<h2 class="text-lg font-semibold text-gray-900">Previous Reports</h2>
+					</div>
+					<div class="overflow-y-auto" style="height: calc(100% - 4rem);">
+						{#if historicalReports.length === 0}
+							<div class="p-4 text-sm text-gray-500">
+								No previous coaching reports yet. Analyze your first call transcript to see reports here.
+							</div>
+						{:else}
+							{#each historicalReports as report}
+								<button
+									onclick={() => selectReport(report)}
+									class="w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 {selectedReport?.id ===
+									report.id
+										? 'border-orange-200 bg-orange-50'
+										: ''}"
+								>
+									<div class="truncate text-sm font-medium text-gray-900">
+										{report.conversationName}
+									</div>
+									<div class="mt-1 text-xs text-gray-500">
+										{formatDate(report.timestamp)}
+									</div>
+									<div class="mt-1 flex space-x-2">
+										<span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+											{report.speakerGrades.length} speaker{report.speakerGrades.length === 1 ? '' : 's'}
+										</span>
+									</div>
+									<!-- svelte-ignore a11y_consider_explicit_label -->
+									<button
+										onclick={(event) => deleteReport(report.id, event)}
+										class="mt-2 rounded bg-red-100 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-200"
+									>
+										Delete
+									</button>
+								</button>
+							{/each}
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Main Content Area -->
+		<div class="min-w-0 flex-1">
+			{#if currentReport}
+				<!-- Report Display -->
+				<div
+					class="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+				>
+					<div class="flex items-center justify-between bg-orange-600 px-6 py-4">
+						<div>
+							<h2 class="text-xl font-bold text-white">Meeting Coaching Report</h2>
+							<p class="mt-1 text-orange-100">{currentReport.conversationName}</p>
+						</div>
+						<div class="flex items-center space-x-3">
+							<Button onclick={startNewAnalysis} variant="secondary" size="sm">
+								{#snippet children()}New Analysis{/snippet}
+							</Button>
+							<!-- svelte-ignore a11y_consider_explicit_label -->
+							<button
+								onclick={() => (showSidebar = !showSidebar)}
+								class="rounded-lg bg-orange-700 p-2 text-orange-100 transition-colors hover:bg-orange-800 hover:text-white"
+								title="Toggle sidebar"
+							>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+					<div class="flex-1 overflow-y-auto p-8">
+						<div class="prose max-w-none">
+							{@html renderMarkdown(currentReport.fullReport)}
+						</div>
+					</div>
+				</div>
+			{:else if historicalReports.length > 0 && !isAnalyzing}
+				<!-- Welcome state with historical reports -->
+				<div
+					class="flex h-full flex-col justify-center rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm"
+				>
+					<div class="mb-6">
+						<div
+							class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100"
+						>
+							<svg
+								class="h-8 w-8 text-orange-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+								></path>
+							</svg>
+						</div>
+						<h3 class="mb-2 text-xl font-semibold text-gray-900">Welcome to Meeting Coach</h3>
+						<p class="mx-auto max-w-md text-gray-600">
+							Upload a new call transcript for AI-powered coaching analysis, or browse your previous 
+							coaching reports from the sidebar.
+						</p>
+					</div>
+					<Button onclick={startNewAnalysis}>
+						{#snippet children()}Start New Analysis{/snippet}
+					</Button>
+				</div>
+			{:else}
+				<!-- Transcript Upload Interface -->
+				<div
+					class="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+				>
+					<div class="flex items-center justify-between bg-orange-600 px-6 py-4">
+						<div>
+							<h2 class="text-xl font-bold text-white">Meeting Coach</h2>
+							<p class="mt-1 text-orange-100">Upload transcript for AI coaching analysis</p>
+						</div>
+						{#if historicalReports.length > 0}
+							<!-- svelte-ignore a11y_consider_explicit_label -->
+							<button
+								onclick={() => (showSidebar = !showSidebar)}
+								class="rounded-lg bg-orange-700 p-2 text-orange-100 transition-colors hover:bg-orange-800 hover:text-white"
+								title="Toggle sidebar"
+							>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									></path>
+								</svg>
+							</button>
+						{/if}
+					</div>
+
+					{#if isAnalyzing}
+						<!-- Analysis Progress -->
+						<div class="flex flex-1 flex-col items-center justify-center p-8">
+							<div
+								class="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100"
+							>
+								<div class="h-8 w-8 animate-spin rounded-full border-b-2 border-orange-600"></div>
+							</div>
+							<h3 class="mb-2 text-xl font-semibold text-gray-900">Analyzing Transcript</h3>
+							<p class="text-gray-600">
+								AI coach is analyzing speaking patterns, grading performance, and counting filler words...
+							</p>
+						</div>
+					{:else}
+						<!-- Transcript Input -->
+						<div class="flex flex-1 flex-col p-6">
+							<div class="mb-4">
+								<label for="transcript" class="block text-sm font-medium text-gray-700 mb-2">
+									Call Transcript
+								</label>
+								<p class="text-sm text-gray-500 mb-4">
+									Paste your call transcript below. Include speaker names (e.g., "John: Hello everyone") for best results.
+								</p>
+							</div>
+							
+							<textarea
+								id="transcript"
+								bind:value={transcriptInput}
+								onkeydown={handleKeydown}
+								placeholder="Speaker 1: Hello everyone, thanks for joining today's call.
+Speaker 2: Thanks for having me. I'm excited to discuss...
+Speaker 1: Great! Let's start with..."
+								class="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+								disabled={isAnalyzing}
+							></textarea>
+							
+							<div class="mt-6 flex items-center justify-between">
+								<div class="text-sm text-gray-500">
+									Press Ctrl+Enter to analyze, or click the button below
+								</div>
+								<Button onclick={analyzeTranscript} disabled={isAnalyzeDisabled}>
+									{#snippet children()}
+										{#if isAnalyzing}
+											<div class="flex items-center space-x-2">
+												<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
+												<span>Analyzing...</span>
+											</div>
+										{:else}
+											Analyze Transcript
+										{/if}
+									{/snippet}
+								</Button>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
+</div>
+
+<style>
+	/* Custom prose styles for better report formatting */
+	:global(.prose h1) {
+		font-size: 1.875rem;
+		font-weight: bold;
+		color: #111827;
+		margin-bottom: 1.5rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid #e5e7eb;
+	}
+
+	:global(.prose h2) {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
+		margin-top: 2rem;
+		margin-bottom: 1rem;
+	}
+
+	:global(.prose h3) {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: #374151;
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	:global(.prose p) {
+		color: #374151;
+		line-height: 1.625;
+		margin-bottom: 1rem;
+	}
+
+	:global(.prose ul) {
+		margin-bottom: 1rem;
+	}
+
+	:global(.prose li) {
+		color: #374151;
+		margin-bottom: 0.5rem;
+	}
+
+	:global(.prose strong) {
+		font-weight: 600;
+		color: #111827;
+	}
+</style>

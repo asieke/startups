@@ -67,6 +67,15 @@
 					>
 						Market Research
 					</a>
+					<a
+						href="/meeting-coach"
+						class="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:text-indigo-600 {$page
+							.url.pathname === '/meeting-coach'
+							? 'bg-indigo-50 text-indigo-600'
+							: ''}"
+					>
+						Meeting Coach
+					</a>
 				</div>
 			</div>
 		</div>
