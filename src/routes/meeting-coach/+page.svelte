@@ -13,6 +13,10 @@
 			persuasiveness: string;
 		};
 		overallGrade: string;
+		wordCount: number;
+		speakingTimePercentage: number;
+		pace: string;
+		paceGrade: string;
 		fillerWordCount: number;
 		fillerWordScore: string;
 		keyInsights: string[];
@@ -108,30 +112,47 @@
 		const textLower = text.toLowerCase();
 		let count = 0;
 		
-		// Split into words and check individual words
-		const words = textLower.split(/\s+/);
-		for (const word of words) {
-			const cleanWord = word.replace(/[^\w]/g, ''); // Remove punctuation
-			if (fillerWords.includes(cleanWord)) {
+		// First check for multi-word filler phrases and mark their positions
+		const multiWordFillers = ['you know', 'i mean', 'you see', 'you get', 'sort of', 'kind of'];
+		let markedText = textLower;
+		const phraseMatches: Array<{start: number, end: number}> = [];
+		
+		for (const phrase of multiWordFillers) {
+			const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+			let match;
+			while ((match = regex.exec(textLower)) !== null) {
+				phraseMatches.push({start: match.index, end: match.index + match[0].length});
 				count++;
 			}
 		}
 		
-		// Check for multi-word filler phrases
-		const multiWordFillers = ['you know', 'i mean', 'you see', 'you get', 'sort of', 'kind of'];
-		for (const phrase of multiWordFillers) {
-			const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
-			const matches = textLower.match(regex);
-			if (matches) {
-				count += matches.length;
-				// Remove the individual words that were already counted to avoid double counting
-				const phraseWords = phrase.split(' ');
-				for (const phraseWord of phraseWords) {
-					if (fillerWords.includes(phraseWord)) {
-						count -= matches.length; // Subtract one for each match
+		// Sort phrase matches by position
+		phraseMatches.sort((a, b) => a.start - b.start);
+		
+		// Now check individual words, but skip those that are part of multi-word phrases
+		const words = textLower.split(/\s+/);
+		let currentPos = 0;
+		
+		for (const word of words) {
+			const cleanWord = word.replace(/[^\w]/g, '');
+			if (cleanWord && fillerWords.includes(cleanWord)) {
+				// Check if this word is part of a multi-word phrase we already counted
+				const wordStart = textLower.indexOf(cleanWord, currentPos);
+				const wordEnd = wordStart + cleanWord.length;
+				
+				let isPartOfPhrase = false;
+				for (const phrase of phraseMatches) {
+					if (wordStart >= phrase.start && wordEnd <= phrase.end) {
+						isPartOfPhrase = true;
+						break;
 					}
 				}
+				
+				if (!isPartOfPhrase) {
+					count++;
+				}
 			}
+			currentPos = textLower.indexOf(word, currentPos) + word.length;
 		}
 		
 		// Debug logging
@@ -147,6 +168,43 @@
 		if (ratio < 0.04) return 'B';
 		if (ratio < 0.06) return 'C';
 		if (ratio < 0.08) return 'D';
+		return 'F';
+	}
+
+	function calculatePaceGrade(speakingTimePercentage: number, pace: string): string {
+		// Grade based on both time allocation and pace
+		let score = 0;
+		
+		// Time allocation scoring (40% of grade)
+		if (speakingTimePercentage >= 30 && speakingTimePercentage <= 60) {
+			score += 40; // Excellent balance
+		} else if (speakingTimePercentage >= 20 && speakingTimePercentage <= 70) {
+			score += 32; // Good balance
+		} else if (speakingTimePercentage >= 15 && speakingTimePercentage <= 80) {
+			score += 24; // Adequate balance
+		} else if (speakingTimePercentage >= 10 && speakingTimePercentage <= 90) {
+			score += 16; // Poor balance
+		} else {
+			score += 8; // Very poor balance
+		}
+		
+		// Pace scoring (60% of grade)
+		const paceNormalized = pace.toLowerCase();
+		if (paceNormalized === 'normal') {
+			score += 60; // Excellent pace
+		} else if (paceNormalized === 'slow') {
+			score += 36; // Slow but manageable
+		} else if (paceNormalized === 'fast') {
+			score += 24; // Too fast
+		} else {
+			score += 30; // Unknown, give average
+		}
+		
+		// Convert to letter grade
+		if (score >= 90) return 'A';
+		if (score >= 80) return 'B';
+		if (score >= 70) return 'C';
+		if (score >= 60) return 'D';
 		return 'F';
 	}
 
@@ -188,7 +246,7 @@
 			// Generate conversation name
 			const conversationName = extractConversationName(transcriptInput);
 
-			const analysisPrompt = `You are an expert communication coach analyzing a meeting transcript. Provide a comprehensive coaching report card.
+			const analysisPrompt = `You are an expert communication coach analyzing a meeting transcript. Provide a comprehensive coaching report card using the EXACT grading rubric below.
 
 TRANSCRIPT TO ANALYZE:
 ${transcriptInput}
@@ -197,24 +255,59 @@ ANALYSIS REQUIREMENTS:
 
 1. IDENTIFY SPEAKERS: Parse who is speaking in the conversation (look for patterns like "Speaker 1:", "John:", etc. or infer from context)
 
-2. GRADE EACH SPEAKER (A-F) on these dimensions:
-   - Clarity: How clear and articulate they were
-   - Engagement: How well they engaged with others and the topic
-   - Professionalism: Professional communication style and tone
-   - Structure: How well they organized their thoughts and contributions
-   - Persuasiveness: How effectively they communicated their points
+2. GRADE EACH SPEAKER using this EXACT RUBRIC (A-F):
 
-3. FILLER WORD ANALYSIS: I will separately count filler words, but note any patterns you observe.
+**CLARITY RUBRIC:**
+- A: Clear pronunciation, no mumbling, easy to understand, well-articulated
+- B: Mostly clear with minor pronunciation issues, generally easy to follow
+- C: Some unclear speech patterns, occasional difficulty understanding
+- D: Frequently unclear, mumbling, hard to follow
+- F: Very difficult to understand, poor articulation
+
+**ENGAGEMENT RUBRIC:**
+- A: Actively participates, asks questions, responds thoughtfully, shows genuine interest
+- B: Good participation, responds when prompted, shows interest
+- C: Moderate engagement, some responses but limited initiative
+- D: Minimal engagement, rare participation, seems disinterested
+- F: No meaningful engagement, completely passive
+
+**PROFESSIONALISM RUBRIC:**
+- A: Highly professional tone, appropriate language, respectful, courteous
+- B: Generally professional with minor lapses, appropriate most of the time
+- C: Adequate professionalism, some informal language but acceptable
+- D: Below professional standards, inappropriate language or tone
+- F: Unprofessional, inappropriate, disrespectful
+
+**STRUCTURE RUBRIC:**
+- A: Highly organized thoughts, logical flow, clear beginning/middle/end
+- B: Well-structured with minor tangents, mostly logical progression
+- C: Some organization but occasional rambling or unclear connections
+- D: Poor structure, frequent tangents, hard to follow logic
+- F: No clear structure, completely disorganized
+
+**PERSUASIVENESS RUBRIC:**
+- A: Compelling arguments, strong evidence, convincing delivery
+- B: Good arguments with some supporting evidence, generally convincing
+- C: Adequate points but lacking strong evidence or conviction
+- D: Weak arguments, little evidence, not convincing
+- F: No persuasive elements, unclear or unconvincing points
+
+3. CALCULATE QUANTITATIVE METRICS:
+- Count approximate words spoken by each speaker
+- Estimate speaking time percentage for each speaker
+- Note speaking pace (fast/normal/slow) based on word density
 
 4. PROVIDE COACHING INSIGHTS for each speaker including:
-   - Specific strengths demonstrated
-   - Areas for improvement
-   - Communication patterns observed
+- Specific strengths demonstrated
+- Areas for improvement
+- Communication patterns observed
 
 5. OVERALL MEETING ANALYSIS:
-   - General insights about the conversation dynamics
-   - Key takeaways for improving future meetings
-   - Specific improvement areas for the group
+- General insights about the conversation dynamics
+- Key takeaways for improving future meetings
+- Specific improvement areas for the group
+
+CRITICAL: Use the EXACT rubric above. Do not deviate from these grading criteria. Be consistent and deterministic.
 
 Return your analysis in the following JSON format:
 {
@@ -229,6 +322,9 @@ Return your analysis in the following JSON format:
         "persuasiveness": "A-F"
       },
       "overallGrade": "A-F",
+      "wordCount": 123,
+      "speakingTimePercentage": 45,
+      "pace": "normal/fast/slow",
       "keyInsights": ["insight 1", "insight 2", ...]
     }
   ],
@@ -237,7 +333,7 @@ Return your analysis in the following JSON format:
   "improvementAreas": ["area 1", "area 2", ...]
 }
 
-Provide detailed, actionable coaching feedback. Be specific about what each person did well and what they can improve.`;
+Provide detailed, actionable coaching feedback based strictly on the rubric above.`;
 
 			const response = await fetch('/api/pro', {
 				method: 'POST',
@@ -283,7 +379,11 @@ Provide detailed, actionable coaching feedback. Be specific about what each pers
 							sectionSpeakerLower === gradeSpeaker ||
 							sectionSpeakerLower.includes(gradeSpeaker) ||
 							gradeSpeaker.includes(sectionSpeakerLower) ||
-							sectionSpeakerLower.replace(/[^\w\s]/g, '') === gradeSpeaker.replace(/[^\w\s]/g, '')
+							sectionSpeakerLower.replace(/[^\w\s]/g, '') === gradeSpeaker.replace(/[^\w\s]/g, '') ||
+							// Try partial matching for cases like "Speaker 1" vs "Speaker1"
+							sectionSpeakerLower.replace(/\s+/g, '') === gradeSpeaker.replace(/\s+/g, '') ||
+							// Try matching just the name part
+							sectionSpeakerLower.split(' ')[0] === gradeSpeaker.split(' ')[0]
 						) {
 							speakerText = text;
 							console.log(`Flexible match found: "${grade.speaker}" -> "${sectionSpeaker}"`);
@@ -292,15 +392,34 @@ Provide detailed, actionable coaching feedback. Be specific about what each pers
 					}
 					if (!speakerText) {
 						console.log(`No match found for speaker: "${grade.speaker}"`);
+						console.log('Available speakers:', Object.keys(speakerSections));
+						// Try one more fuzzy match - look for any speaker containing digits if grade speaker has digits
+						const gradeHasDigits = /\d/.test(gradeSpeaker);
+						if (gradeHasDigits) {
+							for (const [sectionSpeaker, text] of Object.entries(speakerSections)) {
+								if (/\d/.test(sectionSpeaker.toLowerCase())) {
+									speakerText = text;
+									console.log(`Digit-based match found: "${grade.speaker}" -> "${sectionSpeaker}"`);
+									break;
+								}
+							}
+						}
 					}
 				}
 				
+				// Calculate filler words
 				const fillerCount = countFillerWords(speakerText);
-				const wordCount = speakerText.split(/\s+/).filter(word => word.length > 0).length;
-				const fillerScore = wordCount > 0 ? calculateFillerWordScore(fillerCount, wordCount) : 'N/A';
+				const actualWordCount = speakerText ? speakerText.split(/\s+/).filter(word => word.length > 0).length : 0;
+				const fillerScore = actualWordCount > 0 ? calculateFillerWordScore(fillerCount, actualWordCount) : 'N/A';
+				
+				// Calculate pace grade based on speaking time percentage and pace
+				const paceGrade = calculatePaceGrade(grade.speakingTimePercentage, grade.pace);
+
+				console.log(`Speaker "${grade.speaker}": ${actualWordCount} words, ${fillerCount} fillers, score: ${fillerScore}`);
 
 				return {
 					...grade,
+					paceGrade: paceGrade,
 					fillerWordCount: fillerCount,
 					fillerWordScore: fillerScore
 				};
@@ -392,11 +511,22 @@ Provide detailed, actionable coaching feedback. Be specific about what each pers
 			report += `- Engagement: ${speaker.grades.engagement}\n`;
 			report += `- Professionalism: ${speaker.grades.professionalism}\n`;
 			report += `- Structure: ${speaker.grades.structure}\n`;
-			report += `- Persuasiveness: ${speaker.grades.persuasiveness}\n\n`;
+			report += `- Persuasiveness: ${speaker.grades.persuasiveness}\n`;
+			report += `- Pace: ${speaker.paceGrade}\n\n`;
+			
+			report += `**Quantitative Metrics:**\n`;
+			report += `- Word Count: ${speaker.wordCount || 'N/A'}\n`;
+			report += `- Speaking Time: ${speaker.speakingTimePercentage || 'N/A'}%\n`;
+			report += `- Speaking Pace: ${speaker.pace || 'N/A'}\n\n`;
 			
 			report += `**Filler Word Analysis:**\n`;
-			report += `- Count: ${speaker.fillerWordCount}\n`;
-			report += `- Score: ${speaker.fillerWordScore}\n\n`;
+			report += `- Filler Word Count: ${speaker.fillerWordCount}\n`;
+			report += `- Filler Word Score: ${speaker.fillerWordScore}\n`;
+			if (speaker.wordCount && speaker.fillerWordCount > 0) {
+				const ratio = ((speaker.fillerWordCount / speaker.wordCount) * 100).toFixed(1);
+				report += `- Filler Word Ratio: ${ratio}% of total words\n`;
+			}
+			report += `\n`;
 			
 			report += `**Key Insights:**\n`;
 			for (const insight of speaker.keyInsights) {
